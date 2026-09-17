@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How We Doing — the US economy and the 50 states</title>
+<meta name="description" content="A data profile of the United States and every state: GDP, income, taxes, crime, employment, housing and health, with sources for every series.">
+<link rel="stylesheet" href="assets/css/site.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Cpath d='M7 22l5-7 4 4 4-8 5 11z' fill='%23fff'/%3E%3C/svg%3E">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="index.html"><span class="dot"></span> How We Doing</a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="index.html">Overview</a>
+      <a href="states.html">States</a>
+      <a href="compare.html">Compare</a>
+      <a href="taxes.html">Taxes</a>
+      <a href="crime.html">Crime</a>
+      <a href="methodology.html">Sources</a>
+      <button class="theme-toggle" type="button">Dark</button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap">
+
+  <section>
+    <p class="small muted-text" id="asof"></p>
+    <h1>The United States, measured</h1>
+    <p class="page-intro">
+      The American economy is <strong id="hero-gdp">—</strong> a year in output — but that single number
+      hides fifty-one very different places. A typical household in <strong id="hero-mhi-hi">—</strong> earns
+      <strong id="hero-mhi-spread">—</strong> what one in <strong id="hero-mhi-lo">—</strong> does. A homeowner in <strong id="hero-prop-hi">—</strong> pays
+      <strong id="hero-prop-spread">—</strong> times the property tax rate of one in <strong id="hero-prop-lo">—</strong>. This site puts
+      the headline national figures next to the state-level detail, and names the source and
+      vintage of every series.
+    </p>
+
+    <div class="grid cols-4" id="kpis" style="margin-top:1.5rem"></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>National output over three decades</h2>
+      <p>Nominal gross domestic product, current dollars. The 2020 dip and the inflation-driven
+        surge of 2021&ndash;23 are both visible in nominal terms; the growth chart beneath strips
+        inflation out.</p>
+    </div>
+    <div class="grid cols-2">
+      <div class="card"><div id="chart-gdp-history"></div></div>
+      <div class="card"><div id="chart-growth-history"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Where the output is</h2>
+      <p>Five states — California, Texas, New York, Florida and Illinois — produce more than
+        two-fifths of everything the country makes. Hover any state for its figures, or click
+        through to its full profile.</p>
+    </div>
+    <div class="grid cols-2">
+      <div class="card">
+        <div class="chart-title">Nominal GDP by state, 2025</div>
+        <div class="chart-sub">Equal-count colour bins. Click a state for its profile.</div>
+        <div id="map-gdp"></div>
+      </div>
+      <div class="card"><div id="chart-top-gdp"></div></div>
+    </div>
+    <div class="grid cols-2" style="margin-top:1rem">
+      <div class="card"><div id="chart-gdp-per-capita"></div></div>
+      <div class="card"><div id="chart-growth-states"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>What the economy is made of</h2>
+      <p>Value added by industry as a share of national GDP. Real estate, professional services
+        and government each account for more output than manufacturing.</p>
+    </div>
+    <div class="card"><div id="chart-industry"></div></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>How far apart the states are</h2>
+      <p>For each measure, the highest and lowest state, and the gap between them.</p>
+    </div>
+    <div class="table-scroll"><table id="spread-table">
+      <caption>Highest and lowest state on each series. The national figure is the published
+        national value where one exists, otherwise a population-weighted average of the states.</caption>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Crime, over the long run</h2>
+      <p>Reported crime rates are near their lowest levels since the 1970s. The three series are
+        indexed to 1991 — the modern peak — because their raw scales differ by two orders of
+        magnitude, and a single chart with two axes would mislead.</p>
+    </div>
+    <div class="grid cols-2">
+      <div class="card"><div id="chart-crime-index"></div></div>
+      <div class="card"><div id="chart-crime-map"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Every state</h2>
+      <p>Jump straight to a profile.</p>
+    </div>
+    <ul class="state-links" id="all-states"></ul>
+  </section>
+
+  <section>
+    <div class="caveat">
+      <strong>About the numbers.</strong> Every figure here is compiled from published federal and
+      non-partisan sources — BEA, BLS, the Census Bureau, the FBI and the Tax Foundation — and each
+      series carries its vintage on the <a href="methodology.html">sources page</a>. Series are drawn
+      from different years and surveys, so a state's income figure and its GDP figure may not share a
+      reference period. Read the <a href="methodology.html">methodology</a> before quoting a number.
+    </div>
+  </section>
+
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p><strong>How We Doing</strong> — a static, dependency-free profile of the US economy and the states.</p>
+    <p>Data compiled from the US Bureau of Economic Analysis, Bureau of Labor Statistics, Census
+      Bureau, FBI Uniform Crime Reporting, CDC and the Tax Foundation.
+      <a href="methodology.html">Full source list and caveats</a>.</p>
+    <p id="footer-meta"></p>
+  </div>
+</footer>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/util.js"></script>
+<script src="assets/js/charts.js"></script>
+<script src="assets/js/map.js"></script>
+<script src="assets/js/home.js"></script>
+</body>
+</html>

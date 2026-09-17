@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>State taxes — How We Doing</title>
+<meta name="description" content="Income, sales, property, corporate and gas taxes for every US state, plus the total state and local tax burden.">
+<link rel="stylesheet" href="assets/css/site.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Cpath d='M7 22l5-7 4 4 4-8 5 11z' fill='%23fff'/%3E%3C/svg%3E">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="index.html"><span class="dot"></span> How We Doing</a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="index.html">Overview</a>
+      <a href="states.html">States</a>
+      <a href="compare.html">Compare</a>
+      <a href="taxes.html">Taxes</a>
+      <a href="crime.html">Crime</a>
+      <a href="methodology.html">Sources</a>
+      <button class="theme-toggle" type="button">Dark</button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap">
+
+  <section>
+    <h1>What the states tax</h1>
+    <p class="page-intro">No state raises revenue the same way. Nine levy no individual income tax
+      at all and lean on sales or property taxes instead; others do the reverse. The measure that
+      matters for a household is not any single rate but the <strong>total burden</strong> — all
+      state and local taxes paid as a share of income.</p>
+  </section>
+
+  <section>
+    <div class="grid cols-4" id="tax-tiles"></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>The total burden</h2>
+      <p>State and local taxes paid by residents as a share of their income. This counts every tax
+        a household actually pays, including taxes paid to other states.</p>
+    </div>
+    <div class="grid cols-2">
+      <div class="card">
+        <div class="chart-title">State and local tax burden</div>
+        <div class="chart-sub">All state and local taxes as a share of resident income</div>
+        <div id="map-burden"></div>
+      </div>
+      <div class="card"><div id="chart-burden"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>No income tax does not mean no taxes</h2>
+      <p>The nine states with no individual income tax make it up elsewhere. Compare their sales
+        and property rates against the states with the highest income taxes.</p>
+    </div>
+    <div class="card"><div id="chart-tradeoff"></div></div>
+    <div class="grid cols-2" style="margin-top:1rem">
+      <div class="card"><div id="table-noincome"></div></div>
+      <div class="card"><div id="chart-scatter-tax"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Rate by rate</h2>
+      <p>Switch the map between each headline rate.</p>
+    </div>
+    <div class="controls">
+      <div class="field">
+        <label for="tax-metric">Tax</label>
+        <select id="tax-metric"></select>
+      </div>
+    </div>
+    <div class="grid cols-2">
+      <div class="card"><div id="map-tax"></div></div>
+      <div class="card"><div id="chart-tax-ranked"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Every rate, every state</h2>
+    </div>
+    <div class="table-scroll"><table id="tax-table">
+      <caption>Top marginal individual rate, combined state and average local sales tax, effective
+        property tax on owner-occupied housing, top corporate rate, per-gallon gas tax and the
+        total state and local burden.</caption>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="caveat">
+      <strong>Reading these rates.</strong> A top marginal income rate applies only to income above
+      the top bracket threshold, so few households pay it on most of their earnings. States shown
+      with a 0% corporate rate may levy a gross receipts tax instead — Ohio, Texas, Nevada and
+      Washington all do. Washington taxes capital gains above a threshold at 7% despite having no
+      wage income tax. Rates are 2026; burdens use the latest available year.
+    </div>
+  </section>
+
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p><strong>How We Doing</strong> — a static, dependency-free profile of the US economy and the states.</p>
+    <p>Data compiled from the US Bureau of Economic Analysis, Bureau of Labor Statistics, Census
+      Bureau, FBI Uniform Crime Reporting, CDC and the Tax Foundation.
+      <a href="methodology.html">Full source list and caveats</a>.</p>
+  </div>
+</footer>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/util.js"></script>
+<script src="assets/js/charts.js"></script>
+<script src="assets/js/map.js"></script>
+<script src="assets/js/taxes.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "how-we-doing",
+  "version": "1.0.0",
+  "description": "A static profile of the US economy and all 50 states plus DC: GDP, income, taxes, crime and more.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "validate": "node scripts/validate-data.mjs",
+    "test": "node scripts/validate-data.mjs && node scripts/test-site.mjs",
+    "geo": "node scripts/make-geo.cjs > data/geo.json && node scripts/build.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.40.0"
+  }
+}

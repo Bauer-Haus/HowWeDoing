@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>State explorer — How We Doing</title>
+<meta name="description" content="Every US state ranked and mapped across 29 economic, tax, crime and social measures.">
+<link rel="stylesheet" href="assets/css/site.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Cpath d='M7 22l5-7 4 4 4-8 5 11z' fill='%23fff'/%3E%3C/svg%3E">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="index.html"><span class="dot"></span> How We Doing</a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="index.html">Overview</a>
+      <a href="states.html">States</a>
+      <a href="compare.html">Compare</a>
+      <a href="taxes.html">Taxes</a>
+      <a href="crime.html">Crime</a>
+      <a href="methodology.html">Sources</a>
+      <button class="theme-toggle" type="button">Dark</button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap">
+
+  <section>
+    <h1>State explorer</h1>
+    <p class="page-intro">Pick a measure to colour the map and sort the table. Every column is
+      sortable, the table is filterable by region and searchable by name, and the whole thing
+      downloads as CSV.</p>
+  </section>
+
+  <section>
+    <div class="controls">
+      <div class="field">
+        <label for="metric-select">Measure</label>
+        <select id="metric-select"></select>
+      </div>
+      <div class="field">
+        <label for="region-select">Region</label>
+        <select id="region-select"><option value="">All regions</option></select>
+      </div>
+      <div class="field">
+        <label for="state-search">Find a state</label>
+        <input type="search" id="state-search" placeholder="e.g. Ohio" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="group-select">Table columns</label>
+        <select id="group-select"><option value="">All measures</option></select>
+      </div>
+      <button class="btn" type="button" id="download-csv">Download CSV</button>
+      <button class="btn" type="button" id="reset-btn">Reset</button>
+    </div>
+
+    <div class="grid cols-2">
+      <div class="card">
+        <div class="chart-title" id="map-title">—</div>
+        <div class="chart-sub" id="map-sub">—</div>
+        <div id="map-explorer"></div>
+      </div>
+      <div class="card">
+        <div id="chart-ranked"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>The full table</h2>
+      <p id="table-count" class="small muted-text">—</p>
+    </div>
+    <div class="table-scroll">
+      <table id="explorer-table">
+        <caption>Click a column heading to sort. The shaded bar in each cell shows the value
+          against the largest in that column.</caption>
+      </table>
+    </div>
+  </section>
+
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p><strong>How We Doing</strong> — a static, dependency-free profile of the US economy and the states.</p>
+    <p>Data compiled from the US Bureau of Economic Analysis, Bureau of Labor Statistics, Census
+      Bureau, FBI Uniform Crime Reporting, CDC and the Tax Foundation.
+      <a href="methodology.html">Full source list and caveats</a>.</p>
+  </div>
+</footer>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/util.js"></script>
+<script src="assets/js/charts.js"></script>
+<script src="assets/js/map.js"></script>
+<script src="assets/js/explorer.js"></script>
+</body>
+</html>

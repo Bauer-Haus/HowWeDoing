@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compare states — How We Doing</title>
+<meta name="description" content="Put any two US states side by side across GDP, income, taxes, crime, housing and health.">
+<link rel="stylesheet" href="assets/css/site.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Cpath d='M7 22l5-7 4 4 4-8 5 11z' fill='%23fff'/%3E%3C/svg%3E">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="index.html"><span class="dot"></span> How We Doing</a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="index.html">Overview</a>
+      <a href="states.html">States</a>
+      <a href="compare.html">Compare</a>
+      <a href="taxes.html">Taxes</a>
+      <a href="crime.html">Crime</a>
+      <a href="methodology.html">Sources</a>
+      <button class="theme-toggle" type="button">Dark</button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap">
+
+  <section>
+    <h1>Compare two states</h1>
+    <p class="page-intro">Side by side on every measure in the dataset, with the national figure
+      as a reference line and the better value marked where a measure has a clear direction.</p>
+  </section>
+
+  <section>
+    <div class="controls">
+      <div class="field">
+        <label for="state-a">State A</label>
+        <select id="state-a"></select>
+      </div>
+      <div class="field">
+        <label for="state-b">State B</label>
+        <select id="state-b"></select>
+      </div>
+      <button class="btn" type="button" id="swap-btn">Swap</button>
+    </div>
+    <div class="grid cols-3" id="vs-tiles"></div>
+  </section>
+
+  <section>
+    <div class="card" id="vs-body"></div>
+  </section>
+
+  <section>
+    <div class="grid cols-2">
+      <div class="card"><div id="chart-vs-gdp"></div></div>
+      <div class="card"><div id="chart-vs-tax"></div></div>
+    </div>
+  </section>
+
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p><strong>How We Doing</strong> — a static, dependency-free profile of the US economy and the states.</p>
+    <p>Data compiled from the US Bureau of Economic Analysis, Bureau of Labor Statistics, Census
+      Bureau, FBI Uniform Crime Reporting, CDC and the Tax Foundation.
+      <a href="methodology.html">Full source list and caveats</a>.</p>
+  </div>
+</footer>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/util.js"></script>
+<script src="assets/js/charts.js"></script>
+<script src="assets/js/map.js"></script>
+<script src="assets/js/compare.js"></script>
+</body>
+</html>

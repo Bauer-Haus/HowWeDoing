@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crime by state — How We Doing</title>
+<meta name="description" content="Violent crime, property crime and homicide rates for every US state, with long-run national trends.">
+<link rel="stylesheet" href="assets/css/site.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Cpath d='M7 22l5-7 4 4 4-8 5 11z' fill='%23fff'/%3E%3C/svg%3E">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="index.html"><span class="dot"></span> How We Doing</a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="index.html">Overview</a>
+      <a href="states.html">States</a>
+      <a href="compare.html">Compare</a>
+      <a href="taxes.html">Taxes</a>
+      <a href="crime.html">Crime</a>
+      <a href="methodology.html">Sources</a>
+      <button class="theme-toggle" type="button">Dark</button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap">
+
+  <section>
+    <h1>Crime and safety</h1>
+    <p class="page-intro">Reported crime in the United States is near its lowest level since the
+      1970s, but the national average hides a wide spread: the most dangerous state reports more
+      than seven times the violent crime rate of the safest.</p>
+  </section>
+
+  <section>
+    <div class="grid cols-4" id="crime-tiles"></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Three measures, mapped</h2>
+      <p>Switch between violent crime, property crime and homicide.</p>
+    </div>
+    <div class="controls">
+      <div class="field">
+        <label for="crime-metric">Measure</label>
+        <select id="crime-metric"></select>
+      </div>
+    </div>
+    <div class="grid cols-2">
+      <div class="card"><div id="map-crime"></div></div>
+      <div class="card"><div id="chart-crime-ranked"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>The long-run national trend</h2>
+      <p>Rates per 100,000 residents since 1991.</p>
+    </div>
+    <div class="grid cols-2">
+      <div class="card"><div id="chart-violent-trend"></div></div>
+      <div class="card"><div id="chart-property-trend"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>What crime tracks</h2>
+      <p>Crime correlates with poverty far more strongly than with income or taxes. These are
+        associations across 51 jurisdictions, not causes.</p>
+    </div>
+    <div class="grid cols-2">
+      <div class="card"><div id="chart-crime-poverty"></div></div>
+      <div class="card"><div id="chart-crime-income"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Every state</h2>
+    </div>
+    <div class="table-scroll"><table id="crime-table">
+      <caption>FBI Uniform Crime Reporting data for 2024, rates per 100,000 residents.</caption>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="caveat">
+      <strong>How to read crime statistics.</strong> These are <em>offences reported to police</em>,
+      not offences committed. Reporting rates differ by state and by offence — victim surveys
+      consistently find that roughly half of violent crime is never reported — and the FBI's
+      transition to the NIBRS reporting standard left some agencies missing from recent years, so
+      state-to-state comparisons carry real uncertainty. Rates are also population-weighted totals:
+      a state figure blends its cities and its rural counties, which usually differ more from each
+      other than states do. The District of Columbia is a single city and is not comparable to a
+      whole state.
+    </div>
+  </section>
+
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p><strong>How We Doing</strong> — a static, dependency-free profile of the US economy and the states.</p>
+    <p>Data compiled from the US Bureau of Economic Analysis, Bureau of Labor Statistics, Census
+      Bureau, FBI Uniform Crime Reporting, CDC and the Tax Foundation.
+      <a href="methodology.html">Full source list and caveats</a>.</p>
+  </div>
+</footer>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/util.js"></script>
+<script src="assets/js/charts.js"></script>
+<script src="assets/js/map.js"></script>
+<script src="assets/js/crime.js"></script>
+</body>
+</html>

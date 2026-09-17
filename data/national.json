@@ -1,0 +1,418 @@
+{
+  "asOf": "2026-09",
+  "headline": {
+    "gdp": 30762000,
+    "gdpYear": 2025,
+    "realGrowth": 2.0,
+    "population": 342300000,
+    "pcpi": 73000,
+    "medianHouseholdIncome": 83700,
+    "medianHouseholdIncomeSource": "CPS ASEC 2024 (state figures below use ACS 1-year, a different survey)",
+    "povertyRate": 12.4,
+    "unemployment": 4.1,
+    "unemploymentAsOf": "July 2026",
+    "lfpr": 62.3,
+    "violentCrime": 359.1,
+    "propertyCrime": 1858,
+    "murderRate": 5.0,
+    "uninsured": 8.0,
+    "lifeExpectancy": 78.4,
+    "lifeExpectancyYear": 2023,
+    "homeownership": 65.1,
+    "bachelorsPlus": 35.0,
+    "federalTopIncomeRate": 37.0,
+    "federalCorporateRate": 21.0,
+    "federalGasTax": 18.4,
+    "federalMinimumWage": 7.25
+  },
+  "gdpHistory": [
+    {
+      "year": 1997,
+      "nominal": 8578000,
+      "realGrowth": 4.5
+    },
+    {
+      "year": 1998,
+      "nominal": 9063000,
+      "realGrowth": 4.5
+    },
+    {
+      "year": 1999,
+      "nominal": 9631000,
+      "realGrowth": 4.8
+    },
+    {
+      "year": 2000,
+      "nominal": 10251000,
+      "realGrowth": 4.1
+    },
+    {
+      "year": 2001,
+      "nominal": 10582000,
+      "realGrowth": 1.0
+    },
+    {
+      "year": 2002,
+      "nominal": 10936000,
+      "realGrowth": 1.7
+    },
+    {
+      "year": 2003,
+      "nominal": 11458000,
+      "realGrowth": 2.8
+    },
+    {
+      "year": 2004,
+      "nominal": 12214000,
+      "realGrowth": 3.9
+    },
+    {
+      "year": 2005,
+      "nominal": 13037000,
+      "realGrowth": 3.5
+    },
+    {
+      "year": 2006,
+      "nominal": 13815000,
+      "realGrowth": 2.8
+    },
+    {
+      "year": 2007,
+      "nominal": 14452000,
+      "realGrowth": 2.0
+    },
+    {
+      "year": 2008,
+      "nominal": 14713000,
+      "realGrowth": 0.1
+    },
+    {
+      "year": 2009,
+      "nominal": 14449000,
+      "realGrowth": -2.6
+    },
+    {
+      "year": 2010,
+      "nominal": 15049000,
+      "realGrowth": 2.7
+    },
+    {
+      "year": 2011,
+      "nominal": 15600000,
+      "realGrowth": 1.6
+    },
+    {
+      "year": 2012,
+      "nominal": 16254000,
+      "realGrowth": 2.3
+    },
+    {
+      "year": 2013,
+      "nominal": 16844000,
+      "realGrowth": 2.1
+    },
+    {
+      "year": 2014,
+      "nominal": 17551000,
+      "realGrowth": 2.5
+    },
+    {
+      "year": 2015,
+      "nominal": 18206000,
+      "realGrowth": 2.9
+    },
+    {
+      "year": 2016,
+      "nominal": 18695000,
+      "realGrowth": 1.8
+    },
+    {
+      "year": 2017,
+      "nominal": 19478000,
+      "realGrowth": 2.5
+    },
+    {
+      "year": 2018,
+      "nominal": 20533000,
+      "realGrowth": 3.0
+    },
+    {
+      "year": 2019,
+      "nominal": 21381000,
+      "realGrowth": 2.6
+    },
+    {
+      "year": 2020,
+      "nominal": 21060000,
+      "realGrowth": -2.2
+    },
+    {
+      "year": 2021,
+      "nominal": 23315000,
+      "realGrowth": 6.1
+    },
+    {
+      "year": 2022,
+      "nominal": 26007000,
+      "realGrowth": 2.5
+    },
+    {
+      "year": 2023,
+      "nominal": 27721000,
+      "realGrowth": 2.9
+    },
+    {
+      "year": 2024,
+      "nominal": 29298000,
+      "realGrowth": 2.8
+    },
+    {
+      "year": 2025,
+      "nominal": 30762000,
+      "realGrowth": 2.0
+    }
+  ],
+  "industryMix": [
+    {
+      "sector": "Real estate, rental and leasing",
+      "share": 13.0
+    },
+    {
+      "sector": "Professional and business services",
+      "share": 13.0
+    },
+    {
+      "sector": "Government",
+      "share": 11.0
+    },
+    {
+      "sector": "Manufacturing",
+      "share": 10.0
+    },
+    {
+      "sector": "Finance and insurance",
+      "share": 8.0
+    },
+    {
+      "sector": "Health care and social assistance",
+      "share": 8.0
+    },
+    {
+      "sector": "Information",
+      "share": 6.2
+    },
+    {
+      "sector": "Wholesale trade",
+      "share": 6.0
+    },
+    {
+      "sector": "Retail trade",
+      "share": 5.7
+    },
+    {
+      "sector": "Construction",
+      "share": 4.4
+    },
+    {
+      "sector": "Arts, entertainment, accommodation and food",
+      "share": 4.2
+    },
+    {
+      "sector": "Transportation and warehousing",
+      "share": 3.4
+    },
+    {
+      "sector": "Other services",
+      "share": 2.1
+    },
+    {
+      "sector": "Utilities",
+      "share": 1.5
+    },
+    {
+      "sector": "Mining, quarrying, oil and gas",
+      "share": 1.4
+    },
+    {
+      "sector": "Educational services",
+      "share": 1.2
+    },
+    {
+      "sector": "Agriculture, forestry, fishing and hunting",
+      "share": 0.9
+    }
+  ],
+  "crimeHistory": [
+    {
+      "year": 1991,
+      "violent": 758.2,
+      "property": 5140.2,
+      "murder": 9.8
+    },
+    {
+      "year": 1995,
+      "violent": 684.5,
+      "property": 4590.5,
+      "murder": 8.2
+    },
+    {
+      "year": 2000,
+      "violent": 506.5,
+      "property": 3618.3,
+      "murder": 5.5
+    },
+    {
+      "year": 2005,
+      "violent": 469.0,
+      "property": 3431.5,
+      "murder": 5.6
+    },
+    {
+      "year": 2010,
+      "violent": 404.5,
+      "property": 2945.9,
+      "murder": 4.8
+    },
+    {
+      "year": 2014,
+      "violent": 361.6,
+      "property": 2574.1,
+      "murder": 4.4
+    },
+    {
+      "year": 2016,
+      "violent": 386.6,
+      "property": 2451.6,
+      "murder": 5.4
+    },
+    {
+      "year": 2019,
+      "violent": 380.8,
+      "property": 2130.6,
+      "murder": 5.1
+    },
+    {
+      "year": 2020,
+      "violent": 398.5,
+      "property": 1958.2,
+      "murder": 6.5
+    },
+    {
+      "year": 2021,
+      "violent": 387.0,
+      "property": 1933.0,
+      "murder": 6.8
+    },
+    {
+      "year": 2022,
+      "violent": 380.7,
+      "property": 1954.4,
+      "murder": 6.3
+    },
+    {
+      "year": 2023,
+      "violent": 363.8,
+      "property": 1911.7,
+      "murder": 5.7
+    },
+    {
+      "year": 2024,
+      "violent": 359.1,
+      "property": 1858.0,
+      "murder": 5.0
+    }
+  ],
+  "regions": [
+    {
+      "name": "New England",
+      "states": [
+        "CT",
+        "ME",
+        "MA",
+        "NH",
+        "RI",
+        "VT"
+      ]
+    },
+    {
+      "name": "Mideast",
+      "states": [
+        "DE",
+        "DC",
+        "MD",
+        "NJ",
+        "NY",
+        "PA"
+      ]
+    },
+    {
+      "name": "Great Lakes",
+      "states": [
+        "IL",
+        "IN",
+        "MI",
+        "OH",
+        "WI"
+      ]
+    },
+    {
+      "name": "Plains",
+      "states": [
+        "IA",
+        "KS",
+        "MN",
+        "MO",
+        "NE",
+        "ND",
+        "SD"
+      ]
+    },
+    {
+      "name": "Southeast",
+      "states": [
+        "AL",
+        "AR",
+        "FL",
+        "GA",
+        "KY",
+        "LA",
+        "MS",
+        "NC",
+        "SC",
+        "TN",
+        "VA",
+        "WV"
+      ]
+    },
+    {
+      "name": "Southwest",
+      "states": [
+        "AZ",
+        "NM",
+        "OK",
+        "TX"
+      ]
+    },
+    {
+      "name": "Rocky Mountain",
+      "states": [
+        "CO",
+        "ID",
+        "MT",
+        "UT",
+        "WY"
+      ]
+    },
+    {
+      "name": "Far West",
+      "states": [
+        "AK",
+        "CA",
+        "HI",
+        "NV",
+        "OR",
+        "WA"
+      ]
+    }
+  ]
+}
