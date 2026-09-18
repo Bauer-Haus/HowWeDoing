@@ -161,6 +161,20 @@ success each fetcher records the retrieval date as the series vintage in
 required API key is missing, `3` the host is unreachable because of a network
 egress policy.
 
+### Refreshing from a phone, or from anywhere with no shell
+
+`.github/workflows/refresh-data.yml` runs the whole refresh on GitHub's
+runners, which have open outbound HTTPS. Actions tab → **Refresh data from
+source agencies** → **Run workflow**. It fetches from all four agencies,
+validates, rebuilds `assets/js/data.js` and opens a pull request with whatever
+changed, plus a per-source summary table on the run page.
+
+Census and BLS need no API key, so a run with no secrets configured still
+refreshes population, income, housing, poverty, education, insurance and
+unemployment. Adding `BEA_API_KEY` and `FBI_API_KEY` as repository secrets
+brings in GDP and crime. A missing key skips that one source rather than
+failing the run. It also runs monthly on its own.
+
 ### If the fetch is blocked
 
 In a sandboxed environment whose egress policy does not allow `census.gov`,

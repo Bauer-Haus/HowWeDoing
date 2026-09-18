@@ -1,0 +1,160 @@
+name: Refresh data from source agencies
+
+# Pulls the live figures from BEA, Census, BLS and the FBI and opens a pull
+# request with whatever changed. GitHub's runners have open outbound HTTPS, so
+# this works even when the environment the repo was developed in cannot reach
+# those hosts.
+#
+# Run it from the Actions tab: "Refresh data from source agencies" → Run workflow.
+#
+# Keys (repository Settings → Secrets and variables → Actions):
+#   BEA_API_KEY     required for GDP and personal income   https://apps.bea.gov/api/signup/
+#   FBI_API_KEY     required for crime rates               https://api.data.gov/signup/
+#   CENSUS_API_KEY  optional, raises the rate limit        https://api.census.gov/data/key_signup.html
+#   BLS_API_KEY     optional, raises the rate limit        https://data.bls.gov/registrationEngine/
+#
+# Census and BLS work with no key at all, so a run with no secrets configured
+# still refreshes population, income, housing, poverty, education, insurance
+# and unemployment.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Report what would change without opening a pull request'
+        type: boolean
+        default: false
+  schedule:
+    # 12:00 UTC on the 3rd of each month, after the agencies' usual releases
+    - cron: '0 12 3 * *'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fetch from each agency
+        id: fetch
+        env:
+          BEA_API_KEY: ${{ secrets.BEA_API_KEY }}
+          CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
+          BLS_API_KEY: ${{ secrets.BLS_API_KEY }}
+          FBI_API_KEY: ${{ secrets.FBI_API_KEY }}
+          DRY: ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: |
+          set -uo pipefail
+          : > /tmp/summary.md
+          echo "| Source | Result |" >> /tmp/summary.md
+          echo "|---|---|" >> /tmp/summary.md
+
+          failed=0
+
+          run_fetcher () {
+            local label="$1" script="$2"
+            echo "::group::$label"
+            set +e
+            node "$script" $DRY 2>&1 | tee "/tmp/${label}.log"
+            local code=${PIPESTATUS[0]}
+            set -e
+            echo "::endgroup::"
+
+            local note
+            case "$code" in
+              0)
+                if grep -q 'No changes' "/tmp/${label}.log"; then
+                  note='up to date'
+                else
+                  note=$(grep -oE '[0-9]+ value\(s\) (changed|would change)' "/tmp/${label}.log" | head -1)
+                  note="${note:-updated}"
+                fi
+                ;;
+              1) note='response failed its checks — nothing written'; failed=1 ;;
+              2) note='skipped: API key not configured' ;;
+              3) note='host unreachable from this runner'; failed=1 ;;
+              *) note="unexpected exit code $code"; failed=1 ;;
+            esac
+            echo "| $label | $note |" >> /tmp/summary.md
+          }
+
+          run_fetcher BEA    scripts/fetch-bea.mjs
+          run_fetcher Census scripts/fetch-census.mjs
+          run_fetcher BLS    scripts/fetch-bls.mjs
+          run_fetcher FBI    scripts/fetch-fbi.mjs
+
+          echo "any_failed=$failed" >> "$GITHUB_OUTPUT"
+
+      - name: Validate and rebuild
+        run: |
+          node scripts/validate-data.mjs | tee /tmp/validate.log
+          node scripts/build.mjs | tee /tmp/build.log
+
+      - name: Write the run summary
+        if: always()
+        run: |
+          {
+            echo "## Data refresh"
+            echo
+            cat /tmp/summary.md 2>/dev/null || echo "_fetchers did not run_"
+            echo
+            echo "### Validation"
+            echo '```'
+            tail -3 /tmp/validate.log 2>/dev/null || echo "validation did not run"
+            echo '```'
+            echo
+            echo "Detailed per-value changes are in the **Fetch from each agency** step above."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open a pull request with the changes
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- data assets/js/data.js; then
+            echo "No data changed — nothing to open a pull request for."
+            exit 0
+          fi
+
+          branch="data-refresh/$(date -u +%Y-%m-%d-%H%M)"
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git checkout -b "$branch"
+          git add data assets/js/data.js
+          git commit \
+            -m "Refresh data from BEA, Census, BLS and FBI" \
+            -m "Pulled by the refresh-data workflow. Per-source results are in the run summary; per-value changes are in the workflow log."
+          git push -u origin "$branch"
+
+          {
+            echo "Automated refresh of the data files from the source agencies."
+            echo
+            cat /tmp/summary.md
+            echo
+            echo "Validation:"
+            echo '```'
+            tail -3 /tmp/validate.log
+            echo '```'
+            echo
+            echo "Merging this replaces recalled figures with the agencies' own numbers."
+          } > /tmp/pr-body.md
+
+          gh pr create \
+            --title "Refresh data from source agencies" \
+            --body-file /tmp/pr-body.md \
+            --base "${GITHUB_REF_NAME}" \
+            --head "$branch"
+
+      - name: Fail if a fetcher errored
+        if: steps.fetch.outputs.any_failed == '1'
+        run: |
+          echo "At least one source failed — see the summary above."
+          exit 1
