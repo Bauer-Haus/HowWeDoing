@@ -142,6 +142,25 @@
       U.el('code', { text: 'node scripts/validate-data.mjs' }),
       document.createTextNode(' checks the dataset for missing fields, impossible values, internal contradictions and drift against published anchor figures.'),
     ]),
+    U.el('h3', { style: 'margin-top:1.2rem', text: 'Pulling the figures from the agencies directly' }),
+    U.el('p', null, [
+      document.createTextNode('Two of the sources publish machine-readable APIs, and the repository carries clients for both. '),
+      U.el('code', { text: 'scripts/fetch-bea.mjs' }),
+      document.createTextNode(' pulls state GDP, prior-year GDP, real growth and per-capita personal income from the BEA Regional API; '),
+      U.el('code', { text: 'scripts/fetch-census.mjs' }),
+      document.createTextNode(' pulls population, median household income, home values, homeownership, poverty, educational attainment and the uninsured rate from the Census ACS and Population Estimates APIs. Running '),
+      U.el('code', { text: 'npm run fetch' }),
+      document.createTextNode(' replaces those series with the agencies\u2019 own numbers, records the retrieval date as the vintage, and refuses to write anything if the response is incomplete, implausible or moves a figure by more than 35%.'),
+    ]),
+    U.el('p', null, [
+      document.createTextNode('The remaining series \u2014 tax rates, crime, minimum wages, cost of living and life expectancy \u2014 are published as reports rather than APIs and are maintained by hand against the sources listed above.'),
+    ]),
+    U.el('p', { class: 'caveat', style: 'margin-top:0.8rem' }, [
+      U.el('strong', { text: 'Provenance of the figures you are looking at. ' }),
+      document.createTextNode('The environment this site was built in blocks outbound access to census.gov and bea.gov, so the committed figures were compiled from published reporting of those agencies rather than pulled through the API clients. They are accurate at the headline and ranking level and every one is checked against the published value for the extremes, but a figure that matters should be confirmed against the primary source linked above \u2014 or the data refreshed with '),
+      U.el('code', { text: 'npm run fetch' }),
+      document.createTextNode(' from a machine that can reach both hosts.'),
+    ]),
     U.el('p', { class: 'small muted-text', text: 'Data bundle built ' + D.meta.generated + ' · ' + D.states.length + ' jurisdictions · ' + Object.keys(D.metrics).length + ' series.' }),
   ]));
 })();

@@ -7,7 +7,13 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "validate": "node scripts/validate-data.mjs",
-    "test": "node scripts/validate-data.mjs && node scripts/test-site.mjs",
+    "fetch": "node scripts/fetch-bea.mjs && node scripts/fetch-census.mjs && node scripts/validate-data.mjs && node scripts/build.mjs",
+    "fetch:bea": "node scripts/fetch-bea.mjs",
+    "fetch:census": "node scripts/fetch-census.mjs",
+    "fetch:dry": "node scripts/fetch-bea.mjs --dry-run && node scripts/fetch-census.mjs --dry-run",
+    "fixtures": "node scripts/make-fixtures.mjs",
+    "test": "node scripts/validate-data.mjs && node scripts/test-fetchers.mjs && node scripts/test-site.mjs",
+    "test:fetchers": "node scripts/test-fetchers.mjs",
     "geo": "node scripts/make-geo.cjs > data/geo.json && node scripts/build.mjs"
   },
   "devDependencies": {

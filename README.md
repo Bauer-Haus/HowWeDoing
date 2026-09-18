@@ -68,8 +68,13 @@ than letting a typo through.
 
 ```sh
 npm install --no-save playwright
-node scripts/test-site.mjs
+npm test
 ```
+
+`npm test` runs three suites: the data validator, the fetcher tests
+(`scripts/test-fetchers.mjs` — response parsing, suppression codes, geography
+filtering and every merge guard rail, plus an end-to-end fixture run of each
+fetcher, all without network access), and the site tests.
 
 Renders every page in headless Chromium and checks for JS errors, empty chart
 containers, broken internal links, duplicate titles and horizontal overflow at
@@ -92,10 +97,70 @@ already projected to Albers USA with Alaska and Hawaii inset. The script
 simplifies it with Douglas-Peucker and drops islands under 3px², which keeps
 `geo.json` at about 90 KB while leaving every state recognisable.
 
+## Live data from BEA and Census
+
+`scripts/fetch-bea.mjs` and `scripts/fetch-census.mjs` pull the real figures
+straight from the two agencies' APIs and write them into `data/states.json`.
+
+```sh
+BEA_API_KEY=your-key npm run fetch
+```
+
+That runs both fetchers, then validates and rebuilds. To preview without
+writing anything, `npm run fetch:dry`.
+
+| Fetcher | Source | Series it owns |
+|---|---|---|
+| `fetch-bea.mjs` | BEA Regional API — `SAGDP2N` line 1, `SAGDP9N` line 1, `SAINC1` line 3 | `gdp`, `gdpPrev`, `growth`, `pcpi` |
+| `fetch-census.mjs` | Census ACS 1-year detail and subject tables, plus the Population Estimates Program | `pop`, `mhi`, `homeValue`, `ownRate`, `poverty`, `ba`, `uninsured` |
+
+Real GDP growth is computed from the chained-dollar levels rather than read
+from a percent-change table, so the growth rate always reconciles with the
+levels shown beside it. Homeownership is computed from `B25003`.
+
+**Keys.** BEA requires a free UserID from
+<https://apps.bea.gov/api/signup/> (`BEA_API_KEY`). The Census API works
+without a key below 500 calls a day; set `CENSUS_API_KEY` if you have one.
+
+**Flags.** `--year 2025` picks the reference year, `--pop-vintage 2025` the
+population vintage, `--dry-run` reports without writing, `--force` overrides
+the safety checks, `--fixture` runs the parsers against recorded responses
+with no network access.
+
+**Safety checks.** A fetch is refused, with nothing written, if the response
+omits any of the 51 jurisdictions, returns a value outside the plausible range
+for that series, drops a value entirely, or moves any figure more than 35%
+without `--force`. Suppressed values (`(D)`, `(NA)`) and the Census
+`-666666666` sentinel are treated as missing rather than as numbers. On
+success each fetcher records the retrieval date as the series vintage in
+`data/metrics.json`.
+
+**Exit codes.** `0` success, `1` the response failed its checks, `2` a
+required API key is missing, `3` the host is unreachable because of a network
+egress policy.
+
+### If the fetch is blocked
+
+In a sandboxed environment whose egress policy does not allow `census.gov` and
+`bea.gov`, both fetchers exit `3` with the host named. That is a policy denial,
+not a transient error — retrying will not help. Either allow those hosts for
+the environment, or run the fetchers somewhere with open outbound HTTPS and
+commit the updated `data/*.json`.
+
+**This is the situation the committed data was produced under.** The figures
+currently in `data/` were compiled from published reporting of those same
+agencies rather than pulled through these fetchers, because the environment
+they were built in blocks both hosts. Running `npm run fetch` where the hosts
+are reachable replaces them with the agencies' own numbers.
+
 ## Refreshing the data
 
-Each series names its agency and vintage in `data/metrics.json`, and the
-methodology page links to the primary source for every one. To update:
+For the series the fetchers own, use `npm run fetch` — it is the supported
+path. The rest (tax rates, crime, minimum wages, cost of living, life
+expectancy) are published as documents rather than APIs and are maintained by
+hand. Each series names its agency and vintage in `data/metrics.json`, and the
+methodology page links to the primary source for every one. To update one by
+hand:
 
 1. Pull the new figures from the source listed for that series.
 2. Edit `data/states.json` or `data/national.json`.
