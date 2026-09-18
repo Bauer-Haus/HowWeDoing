@@ -77,7 +77,7 @@
       "format": "usd0",
       "better": "high",
       "source": "derived",
-      "desc": "Nominal GDP divided by resident population \u2014 a measure of economic output per person, not of personal income.",
+      "desc": "Nominal GDP divided by resident population — a measure of economic output per person, not of personal income.",
       "derived": true
     },
     "growth": {
@@ -133,7 +133,7 @@
       "format": "usd0",
       "better": "high",
       "source": "census-acs",
-      "desc": "The midpoint of the household income distribution \u2014 half of households earn more, half less."
+      "desc": "The midpoint of the household income distribution — half of households earn more, half less."
     },
     "mhiAdj": {
       "label": "Median income, cost-of-living adjusted",
@@ -197,7 +197,7 @@
       "format": "ratio",
       "better": "low",
       "source": "derived",
-      "desc": "Median home value divided by median household income \u2014 a rough housing affordability measure. Above about 5 is generally considered strained.",
+      "desc": "Median home value divided by median household income — a rough housing affordability measure. Above about 5 is generally considered strained.",
       "derived": true
     },
     "itaxTop": {
@@ -249,11 +249,11 @@
     "gasTax": {
       "label": "State gas tax",
       "short": "Gas tax",
-      "unit": "\u00a2/gal",
+      "unit": "¢/gal",
       "format": "cents",
       "better": "low",
       "source": "tf-gas",
-      "desc": "State excise and related per-gallon taxes on motor fuel, excluding the 18.4\u00a2 federal tax."
+      "desc": "State excise and related per-gallon taxes on motor fuel, excluding the 18.4¢ federal tax."
     },
     "vcrime": {
       "label": "Violent crime rate",
