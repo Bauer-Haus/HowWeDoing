@@ -20,7 +20,7 @@
  */
 import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { getJson, num, EgressBlocked } from './lib/http.mjs';
+import { getJson, num, EgressBlocked, MissingKey } from './lib/http.mjs';
 import { mergeIntoStates, setVintage, reportAndExit, readJson } from './lib/merge.mjs';
 
 const args = process.argv.slice(2);
@@ -165,6 +165,15 @@ async function main() {
 const invokedDirectly = process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
 if (invokedDirectly) {
   main().catch((err) => {
+    if (err && err.missingKey) {
+      console.error(
+        '\nThe Census API rejected the request because no API key was supplied.\n' +
+        '  Census now requires a key for these tables. Get a free one at\n' +
+        '    https://api.census.gov/data/key_signup.html\n' +
+        '  then set CENSUS_API_KEY (as a repository secret, if running in CI).'
+      );
+      process.exit(2);
+    }
     if (err instanceof EgressBlocked) {
       console.error('\n' + err.message);
       process.exit(3);

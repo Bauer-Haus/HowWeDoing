@@ -10,12 +10,13 @@ name: Refresh data from source agencies
 # Keys (repository Settings → Secrets and variables → Actions):
 #   BEA_API_KEY     required for GDP and personal income   https://apps.bea.gov/api/signup/
 #   FBI_API_KEY     required for crime rates               https://api.data.gov/signup/
-#   CENSUS_API_KEY  optional, raises the rate limit        https://api.census.gov/data/key_signup.html
+#   CENSUS_API_KEY  required for the ACS tables              https://api.census.gov/data/key_signup.html
 #   BLS_API_KEY     optional, raises the rate limit        https://data.bls.gov/registrationEngine/
 #
-# Census and BLS work with no key at all, so a run with no secrets configured
-# still refreshes population, income, housing, poverty, education, insurance
-# and unemployment.
+# BLS works with no key at all, so a run with no secrets configured still
+# refreshes unemployment and labour force participation for every state. The
+# other three sources each need their own key; a missing key skips that source
+# rather than failing the run.
 
 on:
   workflow_dispatch:
@@ -40,7 +41,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Fetch from each agency
         id: fetch
@@ -93,9 +94,13 @@ jobs:
           echo "any_failed=$failed" >> "$GITHUB_OUTPUT"
 
       - name: Validate and rebuild
+        # pipefail matters here: without it the exit status is tee's, not the
+        # validator's, and a failed validation would silently reach a branch.
+        shell: bash
         run: |
-          node scripts/validate-data.mjs | tee /tmp/validate.log
-          node scripts/build.mjs | tee /tmp/build.log
+          set -euo pipefail
+          node scripts/validate-data.mjs 2>&1 | tee /tmp/validate.log
+          node scripts/build.mjs 2>&1 | tee /tmp/build.log
 
       - name: Write the run summary
         if: always()
@@ -147,11 +152,26 @@ jobs:
             echo "Merging this replaces recalled figures with the agencies' own numbers."
           } > /tmp/pr-body.md
 
-          gh pr create \
+          if gh pr create \
             --title "Refresh data from source agencies" \
             --body-file /tmp/pr-body.md \
             --base "${GITHUB_REF_NAME}" \
-            --head "$branch"
+            --head "$branch"; then
+            echo "Pull request opened."
+          else
+            # Some repositories do not let Actions open pull requests. The
+            # branch is already pushed, so surface the link instead of failing.
+            compare="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/compare/${GITHUB_REF_NAME}...${branch}?expand=1"
+            echo "Could not open the pull request automatically." >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "The refreshed data is pushed to \`${branch}\`. Open it here:" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "$compare" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "To let this happen automatically: Settings -> Actions -> General ->" >> "$GITHUB_STEP_SUMMARY"
+            echo "Workflow permissions -> tick 'Allow GitHub Actions to create and approve pull requests'." >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice title=Branch pushed::Open the pull request at $compare"
+          fi
 
       - name: Fail if a fetcher errored
         if: steps.fetch.outputs.any_failed == '1'

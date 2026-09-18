@@ -20,6 +20,17 @@ export class EgressBlocked extends Error {
   }
 }
 
+/** The endpoint answered, but it wants credentials this run does not have. */
+export class MissingKey extends Error {
+  constructor(service, signupUrl, envVar) {
+    super(
+      `${service} rejected the request because no API key was supplied.\n` +
+      `  Get a free key at ${signupUrl} and set ${envVar}.`
+    );
+    this.name = 'MissingKey';
+  }
+}
+
 export class ApiError extends Error {
   constructor(msg, status) {
     super(msg);
@@ -75,6 +86,13 @@ export async function getJson(url, { attempts = 4, timeoutMs = 45000, label = ''
       try {
         return JSON.parse(text);
       } catch {
+        /* The Census API answers a keyless request with an HTML "Missing Key"
+           page rather than a 401, so the body has to be inspected. */
+        if (/missing\s*key|invalid\s*key|api[_\s-]?key/i.test(text.slice(0, 600))) {
+          const err = new ApiError(`${label || host} requires an API key`);
+          err.missingKey = true;
+          throw err;
+        }
         throw new ApiError(`${label || host} returned a non-JSON body: ${text.slice(0, 300)}`);
       }
     } catch (err) {

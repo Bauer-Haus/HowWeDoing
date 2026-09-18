@@ -136,13 +136,18 @@ Some deliberate choices in these clients:
   probes for it and, finding nothing, leaves `lfpr` untouched and says so
   rather than writing a figure it could not source.
 
-**Keys.** BEA requires a free UserID from <https://apps.bea.gov/api/signup/>
-(`BEA_API_KEY`). The FBI client needs an api.data.gov key from
-<https://api.data.gov/signup/> (`FBI_API_KEY`) — it falls back to `DEMO_KEY`,
-which is too rate limited for 51 requests. The Census API works without a key
-below 500 calls a day (`CENSUS_API_KEY`); BLS works without one at 25 requests
-a day, and `BLS_API_KEY` from <https://data.bls.gov/registrationEngine/> lifts
-that to 500.
+**Keys.** Three of the four sources require one:
+
+| Variable | Needed for | Sign-up |
+|---|---|---|
+| `BEA_API_KEY` | GDP, growth, per-capita income | <https://apps.bea.gov/api/signup/> |
+| `CENSUS_API_KEY` | population, income, housing, poverty, education, insurance | <https://api.census.gov/data/key_signup.html> |
+| `FBI_API_KEY` | crime rates (an api.data.gov key) | <https://api.data.gov/signup/> |
+| `BLS_API_KEY` | *optional* — lifts 25 requests/day to 500 | <https://data.bls.gov/registrationEngine/> |
+
+The Census API answers a keyless request with an HTML "Missing Key" page rather
+than a 401; the client detects that and exits `2` with the sign-up link instead
+of reporting a parse error.
 
 **Flags.** `--year 2025` picks the reference year, `--pop-vintage 2025` the
 population vintage, `--dry-run` reports without writing, `--force` overrides
@@ -151,8 +156,12 @@ with no network access.
 
 **Safety checks.** A fetch is refused, with nothing written, if the response
 omits any of the 51 jurisdictions, returns a value outside the plausible range
-for that series, drops a value entirely, or moves any figure more than 35%
-without `--force`. Suppressed values (`(D)`, `(NA)`) and the Census
+for that series, drops a value entirely, or moves a figure further than that
+series allows without `--force`. Movement limits are per series and in the right
+unit: rates are bounded in *percentage points* (unemployment may move 3 points)
+and levels in *percent* (GDP may move 35%). A relative bound on a rate would
+reject routine releases — an unemployment rate going from 3.3% to 4.7% is a
+normal 1.4-point move but a 42% relative one. Suppressed values (`(D)`, `(NA)`) and the Census
 `-666666666` sentinel are treated as missing rather than as numbers. On
 success each fetcher records the retrieval date as the series vintage in
 `data/metrics.json`.
@@ -169,11 +178,14 @@ source agencies** → **Run workflow**. It fetches from all four agencies,
 validates, rebuilds `assets/js/data.js` and opens a pull request with whatever
 changed, plus a per-source summary table on the run page.
 
-Census and BLS need no API key, so a run with no secrets configured still
-refreshes population, income, housing, poverty, education, insurance and
-unemployment. Adding `BEA_API_KEY` and `FBI_API_KEY` as repository secrets
-brings in GDP and crime. A missing key skips that one source rather than
-failing the run. It also runs monthly on its own.
+BLS needs no API key, so a run with no secrets configured refreshes
+unemployment and labour force participation for all 51 jurisdictions. The other
+three sources each need a key (`BEA_API_KEY`, `CENSUS_API_KEY`, `FBI_API_KEY`)
+as repository secrets; a missing key skips that source rather than failing the
+run. It also runs monthly on its own.
+
+If the repository does not allow Actions to open pull requests, the branch is
+still pushed and the run summary carries the link to open it by hand.
 
 ### If the fetch is blocked
 
@@ -184,18 +196,19 @@ not a transient error — retrying will not help. Either allow those hosts for
 the environment, or run the fetchers somewhere with open outbound HTTPS and
 commit the updated `data/*.json`.
 
-**This is the situation the committed data was produced under, and it still
-is.** The environment this repository was built in blocks every one of these
-hosts. The figures currently in `data/` are therefore *recalled* rather than
-retrieved: around 32 headline values were verified against published reporting
-(they are pinned as anchors in `scripts/validate-data.mjs`) and the remainder
-were written from prior knowledge of these published statistics. They are
-sound on rankings, orderings and magnitudes, and carry real uncertainty on
-individual values.
+**Where the current figures come from.** The environment this repository was
+developed in blocks every one of these hosts, so most of `data/` was *recalled*
+rather than retrieved: around 29 headline values were verified against published
+reporting (pinned as anchors in `scripts/validate-data.mjs`) and the remainder
+were written from prior knowledge of these published statistics.
 
-Running `npm run fetch` from anywhere with open outbound HTTPS replaces 15 of
-the 27 series with the agencies' own numbers. Until that happens, treat the
-figures as indicative and check anything that matters against the primary
+Two series are no longer in that category. **Unemployment and labour force
+participation for all 51 jurisdictions were pulled live from the BLS API** by
+the refresh workflow (August 2026 observation) and are genuine agency data.
+Everything else still awaits a key or a working route.
+
+Treat the rest as indicative — sound on rankings and magnitudes, uncertain on
+individual values — and check anything that matters against the primary
 source.
 
 ## Refreshing the data
@@ -212,7 +225,9 @@ hand:
 3. Update the `vintage` string in `data/metrics.json`.
 4. If a headline figure changed, update the matching entry in the `anchors`
    array in `scripts/validate-data.mjs` — that array is the record of what was
-   checked against the published source.
+   checked against the published source. Anchors are only valid for series from
+   a closed release; the validator refuses an anchor on a monthly series such as
+   unemployment, since a refresh is *supposed* to move it.
 5. Run `node scripts/validate-data.mjs && node scripts/build.mjs`.
 
 ## Sources

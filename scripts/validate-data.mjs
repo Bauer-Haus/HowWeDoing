@@ -155,6 +155,12 @@ if (national.gdpHistory.at(-1).nominal !== national.headline.gdp) {
 
 /* ---------- 3. published anchors ---------- */
 
+/* Anchors pin a value to what its source published, so a refresh that
+   introduces a typo fails loudly. They only make sense for series drawn from a
+   closed release: a completed BEA year, an ACS vintage, an FBI reporting year,
+   a statutory tax rate. A monthly series like unemployment is *supposed* to
+   move every time it is fetched, so anchoring it guarantees a false failure —
+   the cadence check below refuses to let one be added. */
 const anchors = [
   ['CA', 'gdp', 4251000, 'BEA 2025: California $4.251T'],
   ['TX', 'gdp', 2904000, 'BEA 2025: Texas $2.904T'],
@@ -170,9 +176,6 @@ const anchors = [
   ['NM', 'vcrime', 717.1, 'FBI 2024: New Mexico'],
   ['ME', 'vcrime', 100.1, 'FBI 2024: Maine, lowest violent crime rate'],
   ['NH', 'vcrime', 110.1, 'FBI 2024: New Hampshire'],
-  ['SD', 'unemp', 2.0, 'BLS July 2026: South Dakota, lowest unemployment'],
-  ['ND', 'unemp', 2.2, 'BLS July 2026: North Dakota'],
-  ['DC', 'unemp', 5.9, 'BLS July 2026: District of Columbia, highest unemployment'],
   ['CA', 'itaxTop', 13.3, 'Tax Foundation 2026: California, highest top marginal rate'],
   ['OK', 'itaxTop', 4.5, 'Tax Foundation 2026: Oklahoma, cut from 4.75% for 2026'],
   ['MT', 'itaxTop', 5.65, 'Tax Foundation 2026: Montana, cut from 5.9% for 2026'],
@@ -186,6 +189,15 @@ const anchors = [
 ];
 
 const byAbbr = Object.fromEntries(states.map((s) => [s.abbr, s]));
+
+for (const [, metric] of anchors) {
+  const def = metrics.metrics[metric];
+  const cadence = def && metrics.sources[def.source] && metrics.sources[def.source].cadence;
+  if (cadence === 'monthly') {
+    fail(`anchor on "${metric}" is invalid: its source updates monthly, so an exact anchor will fail on every refresh. Use the plausible-range check instead.`);
+  }
+}
+
 for (const [abbr, metric, expected, why] of anchors) {
   const got = byAbbr[abbr]?.[metric];
   if (got !== expected) fail(`anchor drift — ${abbr}.${metric} is ${got}, expected ${expected} (${why})`);

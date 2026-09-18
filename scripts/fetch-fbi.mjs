@@ -8,9 +8,13 @@
  * key works across federal APIs. DEMO_KEY is used if none is set, which is
  * heavily rate limited and will usually fail across 51 requests.
  *
- * Endpoint: https://api.usa.gov/crime/fbi/sapi/api/estimates/states/{abbr}/{from}/{to}
- * Returns yearly estimated counts plus the population they are drawn from, so
- * rates per 100,000 are computed here rather than taken on trust.
+ * The CDE has moved its paths more than once and the estimates route has been
+ * renamed, so rather than hard-coding one URL this tries a list of known
+ * shapes against the first jurisdiction and reuses whichever answers. The
+ * chosen URL is logged, so a run tells you which one is live today.
+ *
+ * Counts come back alongside the population they are drawn from, so rates per
+ * 100,000 are computed here rather than taken on trust.
  */
 import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -29,7 +33,45 @@ const force = has('--force');
 const fixture = has('--fixture');
 const YEAR = Number(val('--year', new Date().getFullYear() - 2));
 const KEY = process.env.FBI_API_KEY || 'DEMO_KEY';
-const BASE = 'https://api.usa.gov/crime/fbi/sapi/api/estimates/states';
+const BASE = 'https://api.usa.gov/crime/fbi/sapi';
+
+/* Candidate shapes, tried in order. Each takes (abbr, year) and returns a path
+   relative to BASE. Add to this list rather than editing one URL in place. */
+const ENDPOINTS = [
+  { name: 'estimates/range', path: (a, y) => `/api/estimates/states/${a}/${y}/${y}` },
+  { name: 'estimates/query', path: (a, y) => `/api/estimates/states/${a}?since=${y}&until=${y}` },
+  { name: 'estimates/plain', path: (a) => `/api/estimates/states/${a}` },
+  { name: 'summarized/state', path: (a, y) => `/api/summarized/state/${a}/all?since=${y}&until=${y}` },
+];
+
+const withKey = (path) => BASE + path + (path.includes('?') ? '&' : '?') + 'api_key=' + encodeURIComponent(KEY);
+
+/** Probe the candidates against one jurisdiction and keep the first that parses. */
+async function discoverEndpoint(sampleAbbr, year) {
+  const tried = [];
+  for (const candidate of ENDPOINTS) {
+    const url = withKey(candidate.path(sampleAbbr, year));
+    try {
+      const payload = await getJson(url, { label: `FBI probe ${candidate.name}`, attempts: 1 });
+      const parsed = parseFbiState(payload, year, sampleAbbr);
+      if (parsed) {
+        console.log(`Using endpoint shape "${candidate.name}".`);
+        return candidate;
+      }
+      tried.push(`${candidate.name}: parsed but had no row for ${year}`);
+    } catch (err) {
+      if (err instanceof EgressBlocked) throw err;
+      tried.push(`${candidate.name}: ${err.message.split('\n')[0].slice(0, 120)}`);
+    }
+  }
+  const err = new Error(
+    'No known FBI endpoint shape responded. Tried:\n  ' + tried.join('\n  ') +
+    '\n\nThe CDE API has changed paths before. Check https://api.usa.gov/crime/fbi/sapi ' +
+    'and add the working shape to ENDPOINTS in scripts/fetch-fbi.mjs.'
+  );
+  err.noEndpoint = true;
+  throw err;
+}
 
 const per100k = (count, population) =>
   count === null || !population ? null : Number(((count / population) * 100000).toFixed(1));
@@ -81,9 +123,10 @@ async function main() {
       console.error('  Get a free key at https://api.data.gov/signup/ for a reliable run.\n');
     }
     console.log(`Fetching FBI estimates for ${YEAR} across ${states.length} jurisdictions …`);
+    const endpoint = await discoverEndpoint(states[0].abbr, YEAR);
     let done = 0;
     for (const s of states) {
-      const url = `${BASE}/${s.abbr}/${YEAR}/${YEAR}?api_key=${encodeURIComponent(KEY)}`;
+      const url = withKey(endpoint.path(s.abbr, YEAR));
       parsed[s.abbr] = parseFbiState(await getJson(url, { label: `FBI ${s.abbr}` }), YEAR, s.abbr);
       done++;
       if (done % 10 === 0) console.log(`  ${done}/${states.length}`);
@@ -122,6 +165,12 @@ async function main() {
 const invokedDirectly = process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url));
 if (invokedDirectly) {
   main().catch((err) => {
+    if (err && err.noEndpoint) {
+      /* Exit 2 (skip) rather than 1: the data is intact, the route is unknown,
+         and this should not fail an otherwise good refresh. */
+      console.error('\n' + err.message);
+      process.exit(2);
+    }
     if (err instanceof EgressBlocked) {
       console.error('\n' + err.message);
       process.exit(3);

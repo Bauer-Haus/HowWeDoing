@@ -203,6 +203,16 @@ checkTrue('merge rejects a missing value', mergeIntoStates(nullValue, ['mhi'], {
 const unknown = [...good, { abbr: 'ZZ', mhi: 70000 }];
 checkTrue('merge rejects an unknown jurisdiction', mergeIntoStates(unknown, ['mhi'], { dryRun: true }).problems.some((p) => /unknown jurisdiction/.test(p)));
 
+/* Rates are guarded in points, not percent: a real BLS release moved Ohio's
+   unemployment 3.3 -> 4.7, which is 42% relative but a routine 1.4 points. */
+const rateRows = states.map((s) => ({ abbr: s.abbr, unemp: s.unemp }));
+const routineRateMove = rateRows.map((r, i) => (i === 0 ? { ...r, unemp: r.unemp + 1.4 } : r));
+const routine = mergeIntoStates(routineRateMove, ['unemp'], { dryRun: true });
+check('merge accepts a routine 1.4-point rate move', [routine.problems.length, routine.changes.length], [0, 1]);
+
+const wildRateMove = rateRows.map((r, i) => (i === 0 ? { ...r, unemp: r.unemp + 6 } : r));
+checkTrue('merge rejects a 6-point rate jump', mergeIntoStates(wildRateMove, ['unemp'], { dryRun: true }).problems.some((p) => /point sanity limit/.test(p)));
+
 const smallMove = good.map((r, i) => (i === 0 ? { ...r, mhi: r.mhi + 500 } : r));
 const moved = mergeIntoStates(smallMove, ['mhi'], { dryRun: true });
 check('merge accepts and reports a normal revision', [moved.problems.length, moved.changes.length], [0, 1]);

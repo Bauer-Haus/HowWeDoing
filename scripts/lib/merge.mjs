@@ -26,12 +26,36 @@ export const RANGES = {
 };
 
 /**
+ * How far a single value may move in one refresh before it is treated as a
+ * likely error rather than a revision.
+ *
+ * Rates need an absolute limit, not a relative one: unemployment going from
+ * 3.3% to 4.7% is a routine 1.4-point move, but 42% in relative terms, and a
+ * relative guard would reject a perfectly good BLS release. Levels (dollars,
+ * counts, populations) keep a relative limit, where a percentage is the
+ * meaningful unit.
+ */
+export const TOLERANCE = {
+  unemp: { abs: 3.0 },
+  lfpr: { abs: 6.0 },
+  poverty: { abs: 5.0 },
+  ba: { abs: 6.0 },
+  uninsured: { abs: 5.0 },
+  growth: { abs: 5.0 },
+  ownRate: { abs: 6.0 },
+  vcrime: { rel: 0.5 },
+  pcrime: { rel: 0.5 },
+  murder: { rel: 0.6 },
+};
+const DEFAULT_TOLERANCE = { rel: 0.35 };
+
+/**
  * @param {object[]} incoming  rows of { abbr, ...fields }
  * @param {string[]} fields    the fields this fetcher owns
  * @param {object} opts        { dryRun, source, tolerance }
  */
 export function mergeIntoStates(incoming, fields, opts = {}) {
-  const { dryRun = false, source = 'fetch', tolerance = 0.35 } = opts;
+  const { dryRun = false, source = 'fetch', tolerance = DEFAULT_TOLERANCE.rel } = opts;
   const states = readJson('data/states.json');
   const byAbbr = Object.fromEntries(states.map((s) => [s.abbr, s]));
 
@@ -60,13 +84,25 @@ export function mergeIntoStates(incoming, fields, opts = {}) {
       }
       const prev = target[f];
       if (typeof prev === 'number' && prev !== 0) {
-        const drift = Math.abs(next - prev) / Math.abs(prev);
-        if (drift > tolerance) {
-          problems.push(
-            `${row.abbr}: ${f} would move ${(drift * 100).toFixed(0)}% (${prev} → ${next}) — ` +
-            `beyond the ${(tolerance * 100).toFixed(0)}% sanity limit; re-run with --force if this is a real revision`
-          );
-          continue;
+        const limit = TOLERANCE[f] || { rel: tolerance ?? DEFAULT_TOLERANCE.rel };
+        if (limit.abs !== undefined) {
+          const move = Math.abs(next - prev);
+          if (move > limit.abs) {
+            problems.push(
+              `${row.abbr}: ${f} would move ${move.toFixed(1)} points (${prev} → ${next}) — ` +
+              `beyond the ${limit.abs}-point sanity limit; re-run with --force if this is a real revision`
+            );
+            continue;
+          }
+        } else {
+          const drift = Math.abs(next - prev) / Math.abs(prev);
+          if (drift > limit.rel) {
+            problems.push(
+              `${row.abbr}: ${f} would move ${(drift * 100).toFixed(0)}% (${prev} → ${next}) — ` +
+              `beyond the ${(limit.rel * 100).toFixed(0)}% sanity limit; re-run with --force if this is a real revision`
+            );
+            continue;
+          }
         }
       }
       if (prev !== next) changes.push({ abbr: row.abbr, field: f, from: prev, to: next });
