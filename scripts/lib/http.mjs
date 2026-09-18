@@ -38,10 +38,11 @@ function isEgressDenial(err, status) {
 }
 
 /**
- * GET a URL and parse JSON, retrying transient failures with exponential backoff.
- * Throws EgressBlocked for policy denials so callers can report them clearly.
+ * Request a URL and parse JSON, retrying transient failures with exponential
+ * backoff. Throws EgressBlocked for policy denials so callers can report them
+ * clearly. Pass `body` to POST (the BLS v2 API takes a JSON body).
  */
-export async function getJson(url, { attempts = 4, timeoutMs = 45000, label = '' } = {}) {
+export async function getJson(url, { attempts = 4, timeoutMs = 45000, label = '', body = null } = {}) {
   const host = new URL(url).host;
   let lastErr;
 
@@ -51,7 +52,13 @@ export async function getJson(url, { attempts = 4, timeoutMs = 45000, label = ''
     try {
       const res = await fetch(url, {
         signal: ac.signal,
-        headers: { accept: 'application/json', 'user-agent': 'how-we-doing-data-fetcher' },
+        method: body ? 'POST' : 'GET',
+        headers: {
+          accept: 'application/json',
+          'user-agent': 'how-we-doing-data-fetcher',
+          ...(body ? { 'content-type': 'application/json' } : {}),
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
       });
       clearTimeout(timer);
 

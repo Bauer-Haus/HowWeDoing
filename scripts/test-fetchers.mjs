@@ -11,6 +11,8 @@
 import { execFileSync } from 'node:child_process';
 import { parseBea, isState } from './fetch-bea.mjs';
 import { parseCensus } from './fetch-census.mjs';
+import { parseBls, seriesId, parseSeriesId } from './fetch-bls.mjs';
+import { parseFbiState } from './fetch-fbi.mjs';
 import { mergeIntoStates, readJson } from './lib/merge.mjs';
 import { num } from './lib/http.mjs';
 
@@ -106,6 +108,78 @@ try {
 }
 checkTrue('parseCensus rejects a header-only response', threw && /unexpected Census response/.test(threw));
 
+
+/* ---------- BLS series IDs and parsing ---------- */
+
+check('seriesId reproduces the documented California series', seriesId('06', '03'), 'LASST060000000000003');
+check('seriesId is 20 characters', seriesId('01', '06').length, 20);
+check('parseSeriesId round-trips', parseSeriesId(seriesId('48', '03')), { fips: '48', measure: '03' });
+check('parseSeriesId rejects a malformed id', parseSeriesId('LASST48003'), null);
+check('parseSeriesId accepts the unadjusted variant', parseSeriesId('LAUST060000000000003'), { fips: '06', measure: '03' });
+
+const blsPayload = {
+  status: 'REQUEST_SUCCEEDED',
+  Results: {
+    series: [
+      {
+        seriesID: 'LASST060000000000003',
+        data: [
+          { year: '2026', period: 'M13', periodName: 'Annual', value: '5.4' },
+          { year: '2026', period: 'M07', periodName: 'July', value: '5.1' },
+          { year: '2026', period: 'M06', periodName: 'June', value: '5.3' },
+          { year: '2025', period: 'M12', periodName: 'December', value: '5.6' },
+        ],
+      },
+      { seriesID: 'NOT-A-LAUS-SERIES', data: [{ year: '2026', period: 'M07', value: '1.0' }] },
+    ],
+  },
+};
+const parsedBls = parseBls(blsPayload, 'test');
+check('parseBls takes the latest monthly observation', parsedBls['06']['03'].value, 5.1);
+check('parseBls labels the period', parsedBls['06']['03'].period, 'July 2026');
+check('parseBls ignores the M13 annual average', parsedBls['06']['03'].value !== 5.4, true);
+check('parseBls ignores unrecognised series', Object.keys(parsedBls), ['06']);
+
+threw = null;
+try {
+  parseBls({ status: 'REQUEST_NOT_PROCESSED', message: ['invalid registration key'], Results: {} }, 'test');
+} catch (e) {
+  threw = e.message;
+}
+checkTrue('parseBls surfaces a rejected request', threw && /invalid registration key/.test(threw), threw);
+
+/* ---------- FBI parsing ---------- */
+
+const fbiPayload = {
+  results: [
+    { year: 2023, state_abbr: 'CA', population: 39000000, violent_crime: 200000, homicide: 2000, property_crime: 900000 },
+    { year: 2024, state_abbr: 'CA', population: 40000000, violent_crime: 196000, homicide: 2000, property_crime: 880000 },
+  ],
+};
+const fbi2024 = parseFbiState(fbiPayload, 2024, 'CA');
+check('parseFbiState computes the violent crime rate', fbi2024.vcrime, 490);
+check('parseFbiState computes the homicide rate', fbi2024.murder, 5);
+check('parseFbiState computes the property crime rate', fbi2024.pcrime, 2200);
+check('parseFbiState selects the requested year', parseFbiState(fbiPayload, 2023, 'CA').vcrime, 512.8);
+check('parseFbiState returns null for a year not present', parseFbiState(fbiPayload, 2019, 'CA'), null);
+check('parseFbiState accepts a bare array', parseFbiState(fbiPayload.results, 2024, 'CA').vcrime, 490);
+
+threw = null;
+try {
+  parseFbiState({ results: [{ year: 2024, population: null, violent_crime: 100 }] }, 2024, 'XX');
+} catch (e) {
+  threw = e.message;
+}
+checkTrue('parseFbiState refuses to compute a rate without population', threw && /no population/.test(threw), threw);
+
+threw = null;
+try {
+  parseFbiState({ error: 'over rate limit' }, 2024, 'XX');
+} catch (e) {
+  threw = e.message;
+}
+checkTrue('parseFbiState rejects an unexpected shape', threw && /unexpected FBI response/.test(threw));
+
 /* ---------- merge guard rails ---------- */
 
 const states = readJson('data/states.json');
@@ -135,7 +209,7 @@ check('merge accepts and reports a normal revision', [moved.problems.length, mov
 
 /* ---------- end-to-end fixture runs ---------- */
 
-for (const script of ['scripts/fetch-bea.mjs', 'scripts/fetch-census.mjs']) {
+for (const script of ['scripts/fetch-bea.mjs', 'scripts/fetch-census.mjs', 'scripts/fetch-bls.mjs']) {
   let out = '';
   let code = 0;
   try {
@@ -145,6 +219,23 @@ for (const script of ['scripts/fetch-bea.mjs', 'scripts/fetch-census.mjs']) {
     out = (e.stdout || '') + (e.stderr || '');
   }
   checkTrue(`${script} runs clean against fixtures`, code === 0 && /No changes/.test(out), out.trim().split('\n').at(-1));
+}
+
+/* The FBI fixture stores integer counts, so rates round-trip to within a
+   rounding step rather than exactly; the run must still succeed. */
+{
+  let out = '';
+  let code = 0;
+  try {
+    out = execFileSync('node', ['scripts/fetch-fbi.mjs', '--fixture', '--dry-run', '--year', '2024'], { encoding: 'utf8' });
+  } catch (e) {
+    code = e.status;
+    out = (e.stdout || '') + (e.stderr || '');
+  }
+  const drifts = [...out.matchAll(/\(([+-][\d.]+)%\)/g)].map((m) => Math.abs(Number(m[1])));
+  const worst = drifts.length ? Math.max(...drifts) : 0;
+  checkTrue('scripts/fetch-fbi.mjs runs clean against fixtures', code === 0, out.trim().split('\n').at(-1));
+  checkTrue('FBI fixture round-trip stays within rounding error', worst < 5, `worst drift ${worst}%`);
 }
 
 /* the data file must be untouched by a dry run */

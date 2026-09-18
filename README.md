@@ -113,14 +113,36 @@ writing anything, `npm run fetch:dry`.
 |---|---|---|
 | `fetch-bea.mjs` | BEA Regional API — `SAGDP2N` line 1, `SAGDP9N` line 1, `SAINC1` line 3 | `gdp`, `gdpPrev`, `growth`, `pcpi` |
 | `fetch-census.mjs` | Census ACS 1-year detail and subject tables, plus the Population Estimates Program | `pop`, `mhi`, `homeValue`, `ownRate`, `poverty`, `ba`, `uninsured` |
+| `fetch-bls.mjs` | BLS Local Area Unemployment Statistics API | `unemp` (and `lfpr` where LAUS publishes it) |
+| `fetch-fbi.mjs` | FBI Crime Data API — state estimates | `vcrime`, `pcrime`, `murder` |
 
-Real GDP growth is computed from the chained-dollar levels rather than read
-from a percent-change table, so the growth rate always reconciles with the
-levels shown beside it. Homeownership is computed from `B25003`.
+That is **15 of the 27 raw series** pulled from the agencies themselves. The
+remaining 12 — tax rates, tax burden, minimum wage, cost of living, life
+expectancy, population change — are published as documents rather than APIs
+and are maintained by hand.
 
-**Keys.** BEA requires a free UserID from
-<https://apps.bea.gov/api/signup/> (`BEA_API_KEY`). The Census API works
-without a key below 500 calls a day; set `CENSUS_API_KEY` if you have one.
+Some deliberate choices in these clients:
+
+- Real GDP growth is computed from the chained-dollar levels rather than read
+  from a percent-change table, so the growth rate always reconciles with the
+  levels shown beside it.
+- Homeownership is computed from `B25003`; crime rates are computed from the
+  FBI's own counts and population rather than taken from a rate field.
+- BLS series IDs follow the documented LAUS format (`LA` + seasonal code +
+  15-character area code + 2-character measure), so California's seasonally
+  adjusted unemployment rate is `LASST060000000000003`. The parser takes the
+  latest *monthly* observation and ignores the `M13` annual average.
+- LAUS does not publish a participation rate for every area. `fetch-bls.mjs`
+  probes for it and, finding nothing, leaves `lfpr` untouched and says so
+  rather than writing a figure it could not source.
+
+**Keys.** BEA requires a free UserID from <https://apps.bea.gov/api/signup/>
+(`BEA_API_KEY`). The FBI client needs an api.data.gov key from
+<https://api.data.gov/signup/> (`FBI_API_KEY`) — it falls back to `DEMO_KEY`,
+which is too rate limited for 51 requests. The Census API works without a key
+below 500 calls a day (`CENSUS_API_KEY`); BLS works without one at 25 requests
+a day, and `BLS_API_KEY` from <https://data.bls.gov/registrationEngine/> lifts
+that to 500.
 
 **Flags.** `--year 2025` picks the reference year, `--pop-vintage 2025` the
 population vintage, `--dry-run` reports without writing, `--force` overrides
@@ -141,17 +163,26 @@ egress policy.
 
 ### If the fetch is blocked
 
-In a sandboxed environment whose egress policy does not allow `census.gov` and
-`bea.gov`, both fetchers exit `3` with the host named. That is a policy denial,
+In a sandboxed environment whose egress policy does not allow `census.gov`,
+`bea.gov`, `bls.gov` or `api.usa.gov`, the fetchers exit `3` with the host
+named. That is a policy denial,
 not a transient error — retrying will not help. Either allow those hosts for
 the environment, or run the fetchers somewhere with open outbound HTTPS and
 commit the updated `data/*.json`.
 
-**This is the situation the committed data was produced under.** The figures
-currently in `data/` were compiled from published reporting of those same
-agencies rather than pulled through these fetchers, because the environment
-they were built in blocks both hosts. Running `npm run fetch` where the hosts
-are reachable replaces them with the agencies' own numbers.
+**This is the situation the committed data was produced under, and it still
+is.** The environment this repository was built in blocks every one of these
+hosts. The figures currently in `data/` are therefore *recalled* rather than
+retrieved: around 32 headline values were verified against published reporting
+(they are pinned as anchors in `scripts/validate-data.mjs`) and the remainder
+were written from prior knowledge of these published statistics. They are
+sound on rankings, orderings and magnitudes, and carry real uncertainty on
+individual values.
+
+Running `npm run fetch` from anywhere with open outbound HTTPS replaces 15 of
+the 27 series with the agencies' own numbers. Until that happens, treat the
+figures as indicative and check anything that matters against the primary
+source.
 
 ## Refreshing the data
 
