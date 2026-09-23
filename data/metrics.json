@@ -353,7 +353,7 @@
     "bls-laus": {
       "agency": "US Bureau of Labor Statistics",
       "series": "Local Area Unemployment Statistics",
-      "vintage": "August 2026, seasonally adjusted, retrieved 2026-09-18",
+      "vintage": "August 2026, seasonally adjusted, retrieved 2026-09-23",
       "url": "https://www.bls.gov/lau/",
       "cadence": "monthly"
     },
