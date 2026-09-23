@@ -11,6 +11,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { derive, resolveNote } from './lib/notes.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
@@ -19,17 +20,17 @@ const states = read('data/states.json');
 const national = read('data/national.json');
 const metrics = read('data/metrics.json');
 const geo = read('data/geo.json');
+const notes = read('data/notes.json');
 
 const round = (n, d = 2) => Math.round(n * 10 ** d) / 10 ** d;
 const gdpTotal = states.reduce((a, s) => a + s.gdp, 0);
 
+derive(states);
 for (const s of states) {
-  s.gdpPerCapita = Math.round((s.gdp * 1e6) / s.pop);
-  s.gdpShare = round((s.gdp / gdpTotal) * 100, 2);
-  s.salesCombined = round(s.salesState + s.salesLocal, 2);
-  s.mhiAdj = Math.round(s.mhi / (s.col / 100));
-  s.priceToIncome = round(s.homeValue / s.mhi, 2);
-  s.gdpGrowthNominal = round(((s.gdp - s.gdpPrev) / s.gdpPrev) * 100, 1);
+  /* Summaries are resolved against this build's data, so a claim like "the
+     lowest violent crime rate" is recomputed every time the data changes. */
+  if (!notes[s.abbr]) throw new Error(`no summary for ${s.abbr} in data/notes.json`);
+  s.note = resolveNote(notes[s.abbr], { states, abbr: s.abbr, metrics: metrics.metrics });
   const g = geo.states[s.name];
   if (!g) throw new Error(`no geometry for ${s.name}`);
   s.path = g.d;

@@ -178,8 +178,8 @@
       "unit": "$",
       "format": "usd0",
       "better": "neutral",
-      "source": "housing",
-      "desc": "Typical value of an owner-occupied home."
+      "source": "census-acs",
+      "desc": "Median value of owner-occupied homes (ACS table B25077)."
     },
     "ownRate": {
       "label": "Homeownership rate",
@@ -187,8 +187,8 @@
       "unit": "%",
       "format": "pct1",
       "better": "high",
-      "source": "census-hvs",
-      "desc": "Share of occupied housing units that are owner-occupied."
+      "source": "census-acs",
+      "desc": "Share of occupied housing units that are owner-occupied (ACS table B25003)."
     },
     "priceToIncome": {
       "label": "Home price to income ratio",
@@ -297,7 +297,7 @@
       "unit": "%",
       "format": "pct1signed",
       "better": "neutral",
-      "source": "census-pop",
+      "source": "census-pop-change",
       "desc": "Percent change in resident population from the April 2020 census to July 2025."
     },
     "ba": {
@@ -371,20 +371,6 @@
       "url": "https://www.census.gov/programs-surveys/popest.html",
       "cadence": "annual"
     },
-    "census-hvs": {
-      "agency": "US Census Bureau",
-      "series": "Housing Vacancies and Homeownership (CPS/HVS)",
-      "vintage": "2025",
-      "url": "https://www.census.gov/housing/hvs/index.html",
-      "cadence": "annual"
-    },
-    "housing": {
-      "agency": "US Census Bureau ACS and Zillow Home Value Index",
-      "series": "Median owner-occupied home value",
-      "vintage": "2025",
-      "url": "https://www.census.gov/programs-surveys/acs",
-      "cadence": "annual"
-    },
     "fbi-crime": {
       "agency": "FBI",
       "series": "Uniform Crime Reporting / Crime Data Explorer",
@@ -454,6 +440,13 @@
       "vintage": "n/a",
       "url": "",
       "cadence": "static"
+    },
+    "census-pop-change": {
+      "agency": "US Census Bureau",
+      "series": "Decennial census (April 2020) against the Population Estimates Program",
+      "vintage": "April 2020 to July 2025, compiled",
+      "url": "https://www.census.gov/programs-surveys/popest.html",
+      "cadence": "annual"
     }
   }
 }

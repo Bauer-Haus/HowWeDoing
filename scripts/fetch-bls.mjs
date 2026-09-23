@@ -23,7 +23,7 @@
 import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { getJson, num, EgressBlocked } from './lib/http.mjs';
-import { mergeIntoStates, setVintage, reportAndExit, readJson } from './lib/merge.mjs';
+import { mergeIntoStates, setVintage, reportAndExit, readJson, readFixture } from './lib/merge.mjs';
 
 const args = process.argv.slice(2);
 const has = (f) => args.includes(f);
@@ -109,7 +109,7 @@ async function main() {
   let data;
   if (fixture) {
     console.log('Using recorded fixtures (no network calls).');
-    data = parseBls(readJson('scripts/fixtures/bls-laus.json'), 'LAUS');
+    data = parseBls(readFixture('bls-laus.json'), 'LAUS');
   } else {
     console.log(`Fetching BLS LAUS series via the ${KEY ? 'v2' : 'v1'} API${KEY ? '' : ' (no BLS_API_KEY set)'} …`);
     const ids = Object.keys(byFips).flatMap((fips) => [

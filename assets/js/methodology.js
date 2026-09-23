@@ -159,12 +159,35 @@
     U.el('p', null, [
       document.createTextNode('That covers 15 of the 27 underlying series. The remaining twelve \u2014 tax rates, tax burden, minimum wages, cost of living, life expectancy and population change \u2014 are published as reports rather than APIs and are maintained by hand against the sources listed above.'),
     ]),
-    U.el('p', { class: 'caveat', style: 'margin-top:0.8rem' }, [
-      U.el('strong', { text: 'Provenance of the figures you are looking at. ' }),
-      document.createTextNode('Unemployment and labour force participation are live BLS figures, pulled from the API by the refresh workflow. The rest of the figures were not retrieved through the clients above, because the environment this site was built in blocks outbound access to the agencies: about 29 headline values \u2014 the largest and smallest state economies, the highest and lowest incomes, crime rates and tax rates \u2014 were checked against published reporting and are pinned as regression anchors, and the remainder were written from prior knowledge of these published statistics and are unverified. Rankings, orderings and magnitudes are sound; individual values carry real uncertainty, particularly mid-range state GDP and anything dated 2025 or later. Refresh the rest with '),
-      U.el('code', { text: 'npm run fetch' }),
-      document.createTextNode(' from a machine that can reach the agencies, or check a figure that matters against the primary source linked above.'),
-    ]),
+    /* Which series came from an agency's API and which were compiled by hand
+       is read from the data itself: a fetch stamps "retrieved <date>" into
+       the source's vintage. This paragraph therefore stays true as sources
+       are added or refreshed. */
+    (function provenance() {
+      const retrieved = (src) => /retrieved (\d{4}-\d{2}-\d{2})/.exec(src.vintage || '');
+      const live = [];
+      const manual = [];
+      for (const [key, def] of Object.entries(D.metrics)) {
+        if (def.derived) continue;
+        const src = D.sources[def.source];
+        (src && retrieved(src) ? live : manual).push(def.short);
+      }
+      const dates = [...new Set(Object.values(D.sources).map(retrieved).filter(Boolean).map((m) => m[1]))].sort();
+      return U.el('p', { class: 'caveat', style: 'margin-top:0.8rem' }, [
+        U.el('strong', { text: 'Provenance of the figures you are looking at. ' }),
+        document.createTextNode(
+          (live.length
+            ? live.length + ' of the ' + (live.length + manual.length) + ' underlying series were pulled directly from the agencies\u2019 APIs' +
+              (dates.length ? ' (most recently on ' + dates[dates.length - 1] + ')' : '') + ': ' + live.join(', ') + '. '
+            : 'None of the series has yet been pulled from an agency API. ') +
+          (manual.length
+            ? 'The remaining ' + manual.length + ' \u2014 ' + manual.join(', ') + ' \u2014 are compiled by hand from the published sources above, ' +
+              'with their headline values checked against published reporting and pinned as regression anchors. ' +
+              'Check a hand-compiled figure against its primary source before relying on it.'
+            : '')
+        ),
+      ]);
+    })(),
     U.el('p', { class: 'small muted-text', text: 'Data bundle built ' + D.meta.generated + ' · ' + D.states.length + ' jurisdictions · ' + Object.keys(D.metrics).length + ' series.' }),
   ]));
 })();

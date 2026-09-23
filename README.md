@@ -73,8 +73,10 @@ npm test
 
 `npm test` runs three suites: the data validator, the fetcher tests
 (`scripts/test-fetchers.mjs` — response parsing, suppression codes, geography
-filtering and every merge guard rail, plus an end-to-end fixture run of each
-fetcher, all without network access), and the site tests.
+filtering, every merge guard rail and the summary tokens, plus an end-to-end
+fixture run of each fetcher, all without network access), and the site tests.
+Fixtures are generated from the current data into a temporary directory on
+every run, so a data refresh can never leave them stale.
 
 Renders every page in headless Chromium and checks for JS errors, empty chart
 containers, broken internal links, duplicate titles and horizontal overflow at
@@ -196,20 +198,35 @@ not a transient error — retrying will not help. Either allow those hosts for
 the environment, or run the fetchers somewhere with open outbound HTTPS and
 commit the updated `data/*.json`.
 
-**Where the current figures come from.** The environment this repository was
-developed in blocks every one of these hosts, so most of `data/` was *recalled*
-rather than retrieved: around 29 headline values were verified against published
-reporting (pinned as anchors in `scripts/validate-data.mjs`) and the remainder
-were written from prior knowledge of these published statistics.
+**Where the current figures come from.** Fifteen of the 24 underlying series —
+GDP, real growth, per-capita income, population, median household income,
+poverty, education, insurance, home values, homeownership, unemployment, labour
+force participation and the three crime rates — are pulled directly from the BEA,
+Census, BLS and FBI APIs by the refresh workflow. The other nine (tax rates, tax
+burden, minimum wage, cost of living, life expectancy, population change) are
+published as documents rather than APIs and are compiled by hand, with their
+headline values pinned as anchors in `scripts/validate-data.mjs`.
 
-Two series are no longer in that category. **Unemployment and labour force
-participation for all 51 jurisdictions were pulled live from the BLS API** by
-the refresh workflow (August 2026 observation) and are genuine agency data.
-Everything else still awaits a key or a working route.
+The methodology page works this split out from the data itself — a fetch stamps
+`retrieved <date>` into a source's vintage — so it stays accurate as sources are
+refreshed or added.
 
-Treat the rest as indicative — sound on rankings and magnitudes, uncertain on
-individual values — and check anything that matters against the primary
-source.
+## State summaries
+
+The one-paragraph summary on each state page lives in `data/notes.json`. Claims
+about ranks and values are written as tokens and resolved against the current
+data at build time, so they cannot go stale when the data is refreshed:
+
+| Token | Renders as |
+|---|---|
+| `{v:vcrime}` | this state's value, formatted as on the site |
+| `{rank:vcrime}` | "lowest", "second-highest", "joint-fastest"… read from the nearer end |
+| `{rank:growth:fastest/slowest}` | the same, with custom words for the two ends |
+| `{rank:mhi@states}` | ranked among the 50 states, leaving out DC |
+| `{Rank:…}` | capitalised, for the start of a sentence |
+
+An unknown metric fails the build. Write rank and value claims with tokens;
+reserve literal text for facts the dataset does not carry.
 
 ## Refreshing the data
 

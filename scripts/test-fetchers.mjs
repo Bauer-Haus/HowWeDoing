@@ -9,12 +9,23 @@
  * end-to-end fixture run of each fetcher.
  */
 import { execFileSync } from 'node:child_process';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+/* Fixtures are generated from the current data for every run, so a data
+   refresh can never leave them stale. */
+const FIXTURES = mkdtempSync(join(tmpdir(), 'hwd-fixtures-'));
+process.env.HWD_FIXTURES = FIXTURES;
+execFileSync('node', ['scripts/make-fixtures.mjs'], { env: process.env, stdio: 'ignore' });
+process.on('exit', () => rmSync(FIXTURES, { recursive: true, force: true }));
 import { parseBea, isState, isBadTableName } from './fetch-bea.mjs';
 import { parseCensus } from './fetch-census.mjs';
 import { parseBls, seriesId, parseSeriesId } from './fetch-bls.mjs';
 import { parseCdeSummary } from './fetch-fbi.mjs';
 import { mergeIntoStates, readJson, previouslyFetched } from './lib/merge.mjs';
 import { num } from './lib/http.mjs';
+import { rankPhrase, resolveNote, derive } from './lib/notes.mjs';
 
 let failures = 0;
 const check = (name, got, want) => {
@@ -204,6 +215,41 @@ try {
 }
 checkTrue('parseCdeSummary never falls back to the national series', threw && /no "California Offenses"/.test(threw));
 
+/* ---------- state summaries ---------- */
+
+{
+  const S = [
+    { abbr: 'AA', x: 10 }, { abbr: 'BB', x: 20 }, { abbr: 'CC', x: 30 },
+    { abbr: 'DD', x: 30 }, { abbr: 'EE', x: 50 }, { abbr: 'DC', x: 99 },
+  ];
+  check('rankPhrase names the top', rankPhrase(S, 'DC', 'x'), 'highest');
+  check('rankPhrase names the bottom', rankPhrase(S, 'AA', 'x'), 'lowest');
+  check('rankPhrase reads from the nearer end', rankPhrase(S, 'BB', 'x'), 'second-lowest');
+  check('rankPhrase marks ties', rankPhrase(S, 'CC', 'x'), 'joint-third-highest');
+  check('rankPhrase can leave DC out', rankPhrase(S, 'EE', 'x', { statesOnly: true }), 'highest');
+  check('rankPhrase takes custom words', rankPhrase(S, 'EE', 'x', { high: 'fastest', low: 'slowest' }), 'second-fastest');
+
+  const metrics = { x: { format: 'pct1' } };
+  check('resolveNote fills values and capitalised ranks',
+    resolveNote('{Rank:x} rate ({v:x}); the {rank:x@states} of any state.', { states: S, abbr: 'EE', metrics }),
+    'Second-highest rate (50.0%); the highest of any state.');
+  threw = null;
+  try { resolveNote('the {rank:nope} thing', { states: S, abbr: 'EE', metrics }); } catch (e) { threw = e.message; }
+  checkTrue('resolveNote rejects an unknown metric', threw && /unknown metric "nope"/.test(threw));
+}
+
+/* Every summary in the repository resolves against the current data. */
+{
+  const notes = readJson('data/notes.json');
+  const metricsAll = readJson('data/metrics.json').metrics;
+  const derived = derive(readJson('data/states.json'));
+  let unresolved = 0;
+  for (const s of derived) {
+    try { resolveNote(notes[s.abbr], { states: derived, abbr: s.abbr, metrics: metricsAll }); } catch { unresolved++; }
+  }
+  check('every state summary resolves against the current data', unresolved, 0);
+}
+
 /* ---------- merge guard rails ---------- */
 
 const states = readJson('data/states.json');
@@ -261,7 +307,7 @@ for (const script of ['scripts/fetch-bea.mjs', 'scripts/fetch-census.mjs', 'scri
   let out = '';
   let code = 0;
   try {
-    out = execFileSync('node', [script, '--fixture', '--dry-run'], { encoding: 'utf8' });
+    out = execFileSync('node', [script, '--fixture', '--dry-run'], { encoding: 'utf8', env: process.env });
   } catch (e) {
     code = e.status;
     out = (e.stdout || '') + (e.stderr || '');
@@ -275,7 +321,7 @@ for (const script of ['scripts/fetch-bea.mjs', 'scripts/fetch-census.mjs', 'scri
   let out = '';
   let code = 0;
   try {
-    out = execFileSync('node', ['scripts/fetch-fbi.mjs', '--fixture', '--dry-run', '--year', '2024'], { encoding: 'utf8' });
+    out = execFileSync('node', ['scripts/fetch-fbi.mjs', '--fixture', '--dry-run', '--year', '2024'], { encoding: 'utf8', env: process.env });
   } catch (e) {
     code = e.status;
     out = (e.stdout || '') + (e.stderr || '');

@@ -14,6 +14,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { derive, resolveNote } from './lib/notes.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
@@ -22,6 +23,7 @@ const states = read('data/states.json');
 const national = read('data/national.json');
 const metrics = read('data/metrics.json');
 const geo = read('data/geo.json');
+const notes = read('data/notes.json');
 
 const errors = [];
 const warnings = [];
@@ -52,9 +54,25 @@ for (const s of states) {
   if (!/^\d{2}$/.test(s.fips)) fail(`${s.abbr}: FIPS code should be two digits, got "${s.fips}"`);
   if (!geo.states[s.name]) fail(`${s.abbr}: no map geometry for "${s.name}"`);
   if (!Array.isArray(s.inds) || s.inds.length < 3) fail(`${s.abbr}: needs at least 3 leading industries`);
-  if (!s.note || s.note.length < 40) fail(`${s.abbr}: missing or too-short note`);
   if (!national.regions.some((r) => r.name === s.region && r.states.includes(s.abbr))) {
     fail(`${s.abbr}: region "${s.region}" does not list it in national.json`);
+  }
+}
+
+/* summaries: one per state, and every token must resolve against the data */
+{
+  const derived = derive(JSON.parse(JSON.stringify(states)));
+  for (const s of states) {
+    const tpl = notes[s.abbr];
+    if (!tpl || tpl.length < 40) { fail(`${s.abbr}: missing or too-short summary in data/notes.json`); continue; }
+    try {
+      resolveNote(tpl, { states: derived, abbr: s.abbr, metrics: metrics.metrics });
+    } catch (err) {
+      fail(`${s.abbr}: summary does not resolve — ${err.message}`);
+    }
+  }
+  for (const k of Object.keys(notes)) {
+    if (!k.startsWith('_') && !states.some((s) => s.abbr === k)) fail(`data/notes.json has a summary for unknown jurisdiction ${k}`);
   }
 }
 

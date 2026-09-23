@@ -10,6 +10,13 @@ import { dirname, join } from 'node:path';
 export const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 export const readJson = (p) => JSON.parse(readFileSync(join(root, p), 'utf8'));
 
+/* Fixtures echo the current data, so they are generated on demand rather than
+   committed — a committed copy goes stale the moment the data is refreshed.
+   scripts/make-fixtures.mjs writes them to HWD_FIXTURES (the test suite points
+   this at a temporary directory). */
+export const fixturesDir = () => process.env.HWD_FIXTURES || join(root, 'scripts', 'fixtures');
+export const readFixture = (name) => JSON.parse(readFileSync(join(fixturesDir(), name), 'utf8'));
+
 /** Plausible ranges, kept in step with scripts/validate-data.mjs. */
 export const RANGES = {
   pop: [500_000, 45_000_000],

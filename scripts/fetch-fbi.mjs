@@ -28,7 +28,7 @@
 import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { getJson, num, EgressBlocked, ApiError } from './lib/http.mjs';
-import { mergeIntoStates, setVintage, reportAndExit, readJson } from './lib/merge.mjs';
+import { mergeIntoStates, setVintage, reportAndExit, readJson, readFixture } from './lib/merge.mjs';
 
 const args = process.argv.slice(2);
 const has = (f) => args.includes(f);
@@ -155,7 +155,7 @@ async function main() {
 
   if (fixture) {
     console.log('Using recorded fixtures (no network calls).');
-    const fx = readJson('scripts/fixtures/fbi-summarized.json');
+    const fx = readFixture('fbi-summarized.json');
     for (const s of states) {
       for (const field of Object.keys(OFFENSES)) {
         const payload = fx[`${s.abbr}|${OFFENSES[field][0]}`];

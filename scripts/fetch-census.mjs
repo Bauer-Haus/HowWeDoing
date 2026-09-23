@@ -21,7 +21,7 @@
 import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { getJson, num, EgressBlocked, MissingKey } from './lib/http.mjs';
-import { mergeIntoStates, setVintage, reportAndExit, readJson } from './lib/merge.mjs';
+import { mergeIntoStates, setVintage, reportAndExit, readJson, readFixture } from './lib/merge.mjs';
 
 const args = process.argv.slice(2);
 const has = (f) => args.includes(f);
@@ -80,9 +80,9 @@ async function main() {
 
   if (fixture) {
     console.log('Using recorded fixtures (no network calls).');
-    detail = parseCensus(readJson('scripts/fixtures/census-acs-detail.json'), 'acs1 detail');
-    subject = parseCensus(readJson('scripts/fixtures/census-acs-subject.json'), 'acs1 subject');
-    pop = parseCensus(readJson('scripts/fixtures/census-pep.json'), 'pep');
+    detail = parseCensus(readFixture('census-acs-detail.json'), 'acs1 detail');
+    subject = parseCensus(readFixture('census-acs-subject.json'), 'acs1 subject');
+    pop = parseCensus(readFixture('census-pep.json'), 'pep');
   } else {
     const detailVars = 'NAME,B19013_001E,B19301_001E,B25077_001E,B25003_001E,B25003_002E';
     const subjectVars = 'NAME,S1701_C03_001E,S1501_C02_015E,S2701_C05_001E';
@@ -160,7 +160,7 @@ async function main() {
   /* Stamp the vintage only when a value moved: re-stamping an unchanged
      series would dirty the repo, and open a pull request, on every run. */
   if ((!result.problems.length || force) && result.changes.length) {
-    const touched = setVintage(['mhi', 'poverty', 'ba', 'uninsured'], `${YEAR} ACS 1-year, retrieved ${new Date().toISOString().slice(0, 10)}`, { dryRun });
+    const touched = setVintage(['mhi', 'poverty', 'ba', 'uninsured', 'homeValue', 'ownRate'], `${YEAR} ACS 1-year, retrieved ${new Date().toISOString().slice(0, 10)}`, { dryRun });
     if (pop && result.changes.some((c) => c.field === 'pop')) {
       setVintage(['pop'], `July 1 ${POP_VINTAGE} estimate, retrieved ${new Date().toISOString().slice(0, 10)}`, { dryRun });
     }

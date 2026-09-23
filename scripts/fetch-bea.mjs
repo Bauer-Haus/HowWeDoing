@@ -19,7 +19,7 @@ import { realpathSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getJson, num, EgressBlocked } from './lib/http.mjs';
-import { mergeIntoStates, setVintage, reportAndExit, readJson, root } from './lib/merge.mjs';
+import { mergeIntoStates, setVintage, reportAndExit, readJson, readFixture, root } from './lib/merge.mjs';
 
 const args = process.argv.slice(2);
 const has = (f) => args.includes(f);
@@ -178,10 +178,10 @@ async function main() {
   const raw = {};
   if (fixture) {
     console.log('Using recorded fixtures (no network calls).');
-    raw.gdpNominal = readJson('scripts/fixtures/bea-sagdp2n.json');
-    raw.gdpReal = readJson('scripts/fixtures/bea-sagdp9n.json');
-    raw.income = readJson('scripts/fixtures/bea-sainc1.json');
-    raw.population = readJson('scripts/fixtures/bea-sainc1-pop.json');
+    raw.gdpNominal = readFixture('bea-sagdp2n.json');
+    raw.gdpReal = readFixture('bea-sagdp9n.json');
+    raw.income = readFixture('bea-sainc1.json');
+    raw.population = readFixture('bea-sainc1-pop.json');
   } else {
     const years = `${YEAR - 1},${YEAR}`;
     console.log(`Fetching BEA Regional data for ${years} …`);

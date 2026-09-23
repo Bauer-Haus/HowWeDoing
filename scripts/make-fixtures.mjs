@@ -12,7 +12,8 @@
  */
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { readJson, root } from './lib/merge.mjs';
+import { mkdirSync } from 'node:fs';
+import { readJson, fixturesDir } from './lib/merge.mjs';
 
 const states = readJson('data/states.json');
 const GDP_YEAR = 2025;
@@ -21,8 +22,9 @@ const POP_VINTAGE = 2025;
 const CRIME_YEAR = 2024;
 
 const write = (name, obj) => {
-  writeFileSync(join(root, 'scripts/fixtures', name), JSON.stringify(obj, null, 1) + '\n');
-  console.log('wrote scripts/fixtures/' + name);
+  mkdirSync(fixturesDir(), { recursive: true });
+  writeFileSync(join(fixturesDir(), name), JSON.stringify(obj, null, 1) + '\n');
+  console.log('wrote ' + join(fixturesDir(), name));
 };
 
 const comma = (n) => n.toLocaleString('en-US');
