@@ -9,10 +9,10 @@
  * end-to-end fixture run of each fetcher.
  */
 import { execFileSync } from 'node:child_process';
-import { parseBea, isState } from './fetch-bea.mjs';
+import { parseBea, isState, isBadTableName } from './fetch-bea.mjs';
 import { parseCensus } from './fetch-census.mjs';
 import { parseBls, seriesId, parseSeriesId } from './fetch-bls.mjs';
-import { parseFbiState } from './fetch-fbi.mjs';
+import { parseCdeSummary } from './fetch-fbi.mjs';
 import { mergeIntoStates, readJson } from './lib/merge.mjs';
 import { num } from './lib/http.mjs';
 
@@ -86,6 +86,11 @@ checkTrue('parseBea rejects an unexpected shape', threw && /unexpected BEA respo
 const multi = parseBea({ BEAAPI: { Results: [{ Data: [{ GeoFips: '06000', TimePeriod: '2025', DataValue: '1' }] }] } }, 'test');
 check('parseBea handles an array of result sets', multi['06'], { 2025: 1 });
 
+/* The exact error BEA returned for the retired SAGDP2N name, from a live run. */
+const beaRenamed = '{"APIErrorCode":"40","APIErrorDescription":"The dataset requested requires parameters that were missing from the request.","ErrorDetail":{"Description":"Invalid Value for Parameter TableName"}}';
+checkTrue('isBadTableName recognises a retired table name', isBadTableName(`SAGDP2N: unexpected BEA response shape — ${beaRenamed}`));
+check('isBadTableName ignores other BEA errors', isBadTableName('Invalid UserID'), false);
+
 /* ---------- Census parsing ---------- */
 
 const censusPayload = [
@@ -108,6 +113,14 @@ try {
 }
 checkTrue('parseCensus rejects a header-only response', threw && /unexpected Census response/.test(threw));
 
+
+threw = null;
+try {
+  parseCensus([['NAME', 'POP', 'state'], ['Texas', '31000000', '48'], ['Texas', '15000000', '48']], 'pep');
+} catch (e) {
+  threw = e.message;
+}
+checkTrue('parseCensus rejects a breakdown returned as several rows per state', threw && /more than one row/.test(threw));
 
 /* ---------- BLS series IDs and parsing ---------- */
 
@@ -148,37 +161,48 @@ try {
 }
 checkTrue('parseBls surfaces a rejected request', threw && /invalid registration key/.test(threw), threw);
 
-/* ---------- FBI parsing ---------- */
+/* ---------- FBI (CDE) parsing ---------- */
 
-const fbiPayload = {
-  results: [
-    { year: 2023, state_abbr: 'CA', population: 39000000, violent_crime: 200000, homicide: 2000, property_crime: 900000 },
-    { year: 2024, state_abbr: 'CA', population: 40000000, violent_crime: 196000, homicide: 2000, property_crime: 880000 },
-  ],
+/* Shape captured from a live probe of /cde/summarized/state/CA/V for 2024. */
+const cdeCA = {
+  offenses: {
+    rates: {
+      'California Offenses': {
+        '01-2024': 39.37, '02-2024': 36.79, '03-2024': 39.77, '04-2024': 39.12,
+        '05-2024': 41.48, '06-2024': 42.12, '07-2024': 43.36, '08-2024': 42.01,
+        '09-2024': 41.83, '10-2024': 40.47, '11-2024': 35.92, '12-2024': 36.24,
+      },
+      'California Clearances': { '01-2024': 17.26 },
+      'United States Offenses': { '01-2024': 27.75 },
+    },
+  },
 };
-const fbi2024 = parseFbiState(fbiPayload, 2024, 'CA');
-check('parseFbiState computes the violent crime rate', fbi2024.vcrime, 490);
-check('parseFbiState computes the homicide rate', fbi2024.murder, 5);
-check('parseFbiState computes the property crime rate', fbi2024.pcrime, 2200);
-check('parseFbiState selects the requested year', parseFbiState(fbiPayload, 2023, 'CA').vcrime, 512.8);
-check('parseFbiState returns null for a year not present', parseFbiState(fbiPayload, 2019, 'CA'), null);
-check('parseFbiState accepts a bare array', parseFbiState(fbiPayload.results, 2024, 'CA').vcrime, 490);
+const ca = parseCdeSummary(cdeCA, 'California', 2024, 'CA');
+check('parseCdeSummary sums twelve monthly rates', Number(ca.rate.toFixed(2)), 478.48);
+check('parseCdeSummary picks the state, not the national series', ca.months, 12);
+
+const partial = JSON.parse(JSON.stringify(cdeCA));
+delete partial.offenses.rates['California Offenses']['12-2024'];
+check('parseCdeSummary refuses a partial year', parseCdeSummary(partial, 'California', 2024, 'CA'), { missing: ['12-2024'] });
+
+check('parseCdeSummary finds the state series when the name differs',
+  Number(parseCdeSummary(cdeCA, 'Calif.', 2024, 'CA').rate.toFixed(2)), 478.48);
 
 threw = null;
 try {
-  parseFbiState({ results: [{ year: 2024, population: null, violent_crime: 100 }] }, 2024, 'XX');
+  parseCdeSummary({ error: { code: 'OVER_RATE_LIMIT' } }, 'California', 2024, 'CA');
 } catch (e) {
   threw = e.message;
 }
-checkTrue('parseFbiState refuses to compute a rate without population', threw && /no population/.test(threw), threw);
+checkTrue('parseCdeSummary rejects an unexpected shape', threw && /unexpected CDE response/.test(threw));
 
 threw = null;
 try {
-  parseFbiState({ error: 'over rate limit' }, 2024, 'XX');
+  parseCdeSummary({ offenses: { rates: { 'United States Offenses': {} } } }, 'California', 2024, 'CA');
 } catch (e) {
   threw = e.message;
 }
-checkTrue('parseFbiState rejects an unexpected shape', threw && /unexpected FBI response/.test(threw));
+checkTrue('parseCdeSummary never falls back to the national series', threw && /no "California Offenses"/.test(threw));
 
 /* ---------- merge guard rails ---------- */
 
@@ -231,8 +255,8 @@ for (const script of ['scripts/fetch-bea.mjs', 'scripts/fetch-census.mjs', 'scri
   checkTrue(`${script} runs clean against fixtures`, code === 0 && /No changes/.test(out), out.trim().split('\n').at(-1));
 }
 
-/* The FBI fixture stores integer counts, so rates round-trip to within a
-   rounding step rather than exactly; the run must still succeed. */
+/* The FBI fixture splits each annual rate into months that sum back to it
+   exactly, so a fixture run must report no changes. */
 {
   let out = '';
   let code = 0;
@@ -242,10 +266,7 @@ for (const script of ['scripts/fetch-bea.mjs', 'scripts/fetch-census.mjs', 'scri
     code = e.status;
     out = (e.stdout || '') + (e.stderr || '');
   }
-  const drifts = [...out.matchAll(/\(([+-][\d.]+)%\)/g)].map((m) => Math.abs(Number(m[1])));
-  const worst = drifts.length ? Math.max(...drifts) : 0;
-  checkTrue('scripts/fetch-fbi.mjs runs clean against fixtures', code === 0, out.trim().split('\n').at(-1));
-  checkTrue('FBI fixture round-trip stays within rounding error', worst < 5, `worst drift ${worst}%`);
+  checkTrue('scripts/fetch-fbi.mjs runs clean against fixtures', code === 0 && /No changes/.test(out), out.trim().split('\n').at(-1));
 }
 
 /* the data file must be untouched by a dry run */

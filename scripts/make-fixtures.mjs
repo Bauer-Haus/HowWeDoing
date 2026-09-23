@@ -143,33 +143,31 @@ write('bls-laus.json', {
 
 /* ---- FBI ---- */
 
-/* Keyed by state abbreviation: the fetcher makes one request per state. */
-const fbi = { _fixture: 'Synthetic FBI Crime Data API responses for offline parser tests. Not a data source.' };
+/* The CDE returns monthly rates per 100,000 keyed "<State> Offenses" and
+   "MM-YYYY". Eleven months carry annual/12 rounded to 2dp, and December
+   carries the remainder, so the twelve sum back to the stored annual rate. */
+const monthly = (annual) => {
+  const base = Math.round((annual / 12) * 100) / 100;
+  const months = {};
+  for (let m = 1; m <= 11; m++) months[`${String(m).padStart(2, '0')}-${CRIME_YEAR}`] = base;
+  months[`12-${CRIME_YEAR}`] = Math.round((annual - base * 11) * 100) / 100;
+  return months;
+};
+const cde = (s, annual) => ({
+  offenses: {
+    rates: {
+      [`${s.name} Offenses`]: monthly(annual),
+      [`${s.name} Clearances`]: monthly(annual * 0.4),
+      'United States Offenses': monthly(annual * 0.9),
+    },
+  },
+});
+const fbi = { _fixture: 'Synthetic FBI CDE summarized responses for offline parser tests. Not a data source.' };
 for (const s of states) {
-  const population = s.pop;
-  fbi[s.abbr] = {
-    results: [
-      {
-        state_id: null,
-        state_abbr: s.abbr,
-        year: CRIME_YEAR - 1,
-        population,
-        violent_crime: Math.round((s.vcrime * 1.05 * population) / 100000),
-        homicide: Math.round((s.murder * 1.05 * population) / 100000),
-        property_crime: Math.round((s.pcrime * 1.05 * population) / 100000),
-      },
-      {
-        state_id: null,
-        state_abbr: s.abbr,
-        year: CRIME_YEAR,
-        population,
-        violent_crime: Math.round((s.vcrime * population) / 100000),
-        homicide: Math.round((s.murder * population) / 100000),
-        property_crime: Math.round((s.pcrime * population) / 100000),
-      },
-    ],
-  };
+  fbi[`${s.abbr}|V`] = cde(s, s.vcrime);
+  fbi[`${s.abbr}|P`] = cde(s, s.pcrime);
+  fbi[`${s.abbr}|HOM`] = cde(s, s.murder);
 }
-write('fbi-estimates.json', fbi);
+write('fbi-summarized.json', fbi);
 
 console.log(`\nFixtures cover ${states.length} jurisdictions (GDP ${GDP_YEAR}, ACS ${ACS_YEAR}, population vintage ${POP_VINTAGE}, crime ${CRIME_YEAR}).`);

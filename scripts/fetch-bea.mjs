@@ -76,6 +76,34 @@ export function parseBea(payload, label) {
   return out;
 }
 
+/* BEA has renamed its regional tables before: the NAICS-suffixed names
+   (SAGDP2N, SAGDP9N) were dropped in a later release. Each role lists every
+   name it has gone by, and the first one BEA accepts is used. */
+const TABLES = {
+  gdpNominal: ['SAGDP2', 'SAGDP2N'],
+  gdpReal: ['SAGDP9', 'SAGDP9N'],
+  income: ['SAINC1'],
+};
+
+export const isBadTableName = (message) => /Invalid Value for Parameter TableName/i.test(String(message));
+
+async function fetchTable(candidates, params) {
+  let lastErr;
+  for (const table of candidates) {
+    try {
+      const parsed = parseBea(await getJson(url({ TableName: table, ...params }), { label: table }), table);
+      console.log(`  using table ${table}`);
+      return parsed;
+    } catch (err) {
+      if (err instanceof EgressBlocked) throw err;
+      if (!isBadTableName(err.message)) throw err;
+      console.log(`  table ${table} is not recognised by BEA — trying the next name`);
+      lastErr = err;
+    }
+  }
+  throw lastErr;
+}
+
 async function main() {
   if (!KEY && !fixture) {
     console.error(
@@ -102,18 +130,9 @@ async function main() {
   } else {
     const years = `${YEAR - 1},${YEAR}`;
     console.log(`Fetching BEA Regional data for ${years} …`);
-    gdpNominal = parseBea(
-      await getJson(url({ TableName: 'SAGDP2N', LineCode: '1', GeoFips: 'STATE', Year: years }), { label: 'SAGDP2N' }),
-      'SAGDP2N'
-    );
-    gdpReal = parseBea(
-      await getJson(url({ TableName: 'SAGDP9N', LineCode: '1', GeoFips: 'STATE', Year: years }), { label: 'SAGDP9N' }),
-      'SAGDP9N'
-    );
-    income = parseBea(
-      await getJson(url({ TableName: 'SAINC1', LineCode: '3', GeoFips: 'STATE', Year: String(YEAR) }), { label: 'SAINC1' }),
-      'SAINC1'
-    );
+    gdpNominal = await fetchTable(TABLES.gdpNominal, { LineCode: '1', GeoFips: 'STATE', Year: years });
+    gdpReal = await fetchTable(TABLES.gdpReal, { LineCode: '1', GeoFips: 'STATE', Year: years });
+    income = await fetchTable(TABLES.income, { LineCode: '3', GeoFips: 'STATE', Year: String(YEAR) });
   }
 
   const year = fixture ? Number(Object.keys(Object.values(gdpNominal)[0]).sort().at(-1)) : YEAR;

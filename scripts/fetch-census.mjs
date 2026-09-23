@@ -55,6 +55,9 @@ export function parseCensus(payload, label) {
   const out = {};
   for (const row of rows) {
     const fips = String(row[stateIdx]).padStart(2, '0');
+    if (out[fips]) {
+      throw new Error(`${label}: more than one row for state ${fips} — the query returned a breakdown rather than a total`);
+    }
     const rec = {};
     header.forEach((col, i) => {
       if (col === 'state' || col === 'NAME') return;
@@ -72,7 +75,8 @@ async function main() {
 
   let detail;
   let subject;
-  let pop;
+  let pop = null;
+  let popSource = null;
 
   if (fixture) {
     console.log('Using recorded fixtures (no network calls).');
@@ -94,32 +98,35 @@ async function main() {
     );
 
     console.log(`Fetching population estimates (vintage ${POP_VINTAGE}) …`);
-    /* The PEP variable is named for its reference year and the endpoint year
-       trails the vintage, so try the documented shape then fall back. */
-    const popAttempts = [
-      `https://api.census.gov/data/${POP_VINTAGE}/pep/population?get=NAME,POP_${POP_VINTAGE}&for=state:*${keyParam}`,
-      `https://api.census.gov/data/${POP_VINTAGE - 1}/pep/population?get=NAME,POP_${POP_VINTAGE - 1}&for=state:*${keyParam}`,
-      `https://api.census.gov/data/${POP_VINTAGE}/pep/population?get=NAME,POP&for=state:*${keyParam}`,
-    ];
-    let lastErr;
+    /* The Population Estimates Program has moved endpoints between decades:
+       the 2010s vintages lived at /pep/population, the 2020s ones at
+       /pep/charv filtered by YEAR. Try the current shape first, then the
+       older ones, for this vintage and the one before. */
+    const popAttempts = [POP_VINTAGE, POP_VINTAGE - 1].flatMap((v) => [
+      `https://api.census.gov/data/${v}/pep/charv?get=NAME,POP&for=state:*&YEAR=${v}${keyParam}`,
+      `https://api.census.gov/data/${v}/pep/population?get=NAME,POP_${v}&for=state:*${keyParam}`,
+    ]);
     for (const attempt of popAttempts) {
       try {
         pop = parseCensus(await getJson(attempt, { label: 'pep', attempts: 2 }), 'pep');
+        popSource = new URL(attempt).pathname;
+        console.log(`  population from ${popSource}`);
         break;
       } catch (err) {
         if (err instanceof EgressBlocked) throw err;
-        lastErr = err;
-        console.error(`  population endpoint not available at ${new URL(attempt).pathname} — trying the next shape`);
+        console.error(`  population not available at ${new URL(attempt).pathname} (${String(err.message).split('\n')[0].slice(0, 90)})`);
       }
     }
-    if (!pop) throw new Error(`could not retrieve population estimates: ${lastErr?.message}`);
+    /* A missing population series must not throw away the ACS tables that
+       did arrive: leave population as it is and say so. */
+    if (!pop) console.error('  no population endpoint answered — population left unchanged; the ACS series still refresh.');
   }
 
   const incoming = [];
   for (const [fips, state] of Object.entries(byFips)) {
     const d = detail[fips] || {};
     const s = subject[fips] || {};
-    const p = pop[fips] || {};
+    const p = (pop && pop[fips]) || {};
     const popValue = Object.entries(p).find(([k]) => k.startsWith('POP'))?.[1] ?? null;
     const ownRate = d.B25003_001E && d.B25003_002E
       ? Number(((d.B25003_002E / d.B25003_001E) * 100).toFixed(1))
@@ -127,7 +134,7 @@ async function main() {
 
     incoming.push({
       abbr: state.abbr,
-      pop: popValue === null ? null : Math.round(popValue),
+      ...(pop ? { pop: popValue === null ? null : Math.round(popValue) } : {}),
       mhi: d.B19013_001E ?? null,
       homeValue: d.B25077_001E ?? null,
       ownRate,
@@ -146,18 +153,17 @@ async function main() {
     }
   }
 
-  const result = mergeIntoStates(
-    incoming,
-    ['pop', 'mhi', 'homeValue', 'ownRate', 'poverty', 'ba', 'uninsured'],
-    { dryRun, source: 'Census API' }
-  );
+  const fields = [...(pop ? ['pop'] : []), 'mhi', 'homeValue', 'ownRate', 'poverty', 'ba', 'uninsured'];
+  const result = mergeIntoStates(incoming, fields, { dryRun, source: 'Census API' });
   console.log(`Parsed ${incoming.length} jurisdictions from the Census API.`);
 
   /* Stamp the vintage only when a value moved: re-stamping an unchanged
      series would dirty the repo, and open a pull request, on every run. */
   if ((!result.problems.length || force) && result.changes.length) {
     const touched = setVintage(['mhi', 'poverty', 'ba', 'uninsured'], `${YEAR} ACS 1-year, retrieved ${new Date().toISOString().slice(0, 10)}`, { dryRun });
-    setVintage(['pop'], `July 1 ${POP_VINTAGE} estimate, retrieved ${new Date().toISOString().slice(0, 10)}`, { dryRun });
+    if (pop && result.changes.some((c) => c.field === 'pop')) {
+      setVintage(['pop'], `July 1 ${POP_VINTAGE} estimate, retrieved ${new Date().toISOString().slice(0, 10)}`, { dryRun });
+    }
     if (touched.length && !dryRun) console.log(`Vintage updated for: ${touched.join(', ')}`);
   }
   reportAndExit(result, { dryRun, force });
