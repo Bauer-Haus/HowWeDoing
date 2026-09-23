@@ -25,6 +25,10 @@ on:
         description: 'Report what would change without opening a pull request'
         type: boolean
         default: false
+      probe_fbi:
+        description: 'Also probe the FBI API routes and print the responses (diagnostic)'
+        type: boolean
+        default: false
   schedule:
     # 12:00 UTC on the 3rd of each month, after the agencies' usual releases
     - cron: '0 12 3 * *'
@@ -42,6 +46,12 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
+
+      - name: Probe FBI API routes
+        if: ${{ inputs.probe_fbi }}
+        env:
+          FBI_API_KEY: ${{ secrets.FBI_API_KEY }}
+        run: node scripts/fetch-fbi.mjs --probe
 
       - name: Fetch from each agency
         id: fetch
@@ -124,7 +134,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          if git diff --quiet -- data assets/js/data.js; then
+          # Judge change by the source files only: assets/js/data.js embeds
+          # its build date, so it differs on every run even when nothing moved.
+          if git diff --quiet -- data; then
             echo "No data changed — nothing to open a pull request for."
             exit 0
           fi

@@ -106,7 +106,54 @@ export function parseFbiState(payload, year, label) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+
+/* ---------- probe mode ----------
+   The CDE replaced the old /sapi service, and its new routes are not well
+   documented. `--probe` requests a spread of candidate URLs and prints the
+   status, content type and the start of each body, so the live route and its
+   response shape can be read straight from a CI log. It writes nothing. */
+const PROBES = [
+  // liveness checks on each base, with both spellings of the key parameter
+  ['cde', '/lookup/states'],
+  ['cde', '/agency/byStateAbbr/CA'],
+  ['sapi', '/api/participation/national'],
+  // new-CDE state estimate and summary shapes
+  ['cde', '/estimate/state/CA/violent-crime?from=01-2024&to=12-2024'],
+  ['cde', '/estimate/state/CA/V?from=01-2024&to=12-2024'],
+  ['cde', '/estimate/state/CA?from=2024&to=2024'],
+  ['cde', '/summarized/state/CA/V?from=01-2024&to=12-2024'],
+  ['cde', '/summarized/state/CA/violent-crime?from=01-2024&to=12-2024'],
+  ['cde', '/summarized/state/CA/HOM?from=01-2024&to=12-2024'],
+];
+const BASES = {
+  cde: 'https://api.usa.gov/crime/fbi/cde',
+  sapi: 'https://api.usa.gov/crime/fbi/sapi',
+};
+
+async function probeEndpoints() {
+  const redact = (u) => u.replace(/(api_key|API_KEY)=[^&]+/g, '$1=***');
+  for (const [base, path] of PROBES) {
+    for (const param of ['API_KEY', 'api_key']) {
+      const url = BASES[base] + path + (path.includes('?') ? '&' : '?') + `${param}=${encodeURIComponent(KEY)}`;
+      try {
+        const res = await fetch(url, { headers: { accept: 'application/json' } });
+        const body = (await res.text()).replace(/\s+/g, ' ').slice(0, 500);
+        console.log(`\n[${res.status}] ${redact(url)}\n  type: ${res.headers.get('content-type')}\n  body: ${body}`);
+        if (res.ok) break; // this spelling works for this route; skip the other
+      } catch (err) {
+        console.log(`\n[ERR] ${redact(url)}\n  ${err.message}`);
+      }
+      await sleep(300);
+    }
+  }
+}
+
 async function main() {
+  if (has('--probe')) {
+    console.log('Probing FBI CDE routes (no data is written) …');
+    await probeEndpoints();
+    return;
+  }
   const states = readJson('data/states.json');
 
   const parsed = {};
@@ -156,7 +203,9 @@ async function main() {
   const result = mergeIntoStates(incoming, ['vcrime', 'pcrime', 'murder'], { dryRun, source: 'FBI Crime Data API' });
   console.log(`Parsed ${incoming.length} jurisdictions from the FBI for ${YEAR}.`);
 
-  if (!result.problems.length || force) {
+  /* Stamp the vintage only when a value moved: re-stamping an unchanged
+     series would dirty the repo, and open a pull request, on every run. */
+  if ((!result.problems.length || force) && result.changes.length) {
     setVintage(['vcrime'], `${YEAR}, retrieved ${new Date().toISOString().slice(0, 10)}`, { dryRun });
   }
   reportAndExit(result, { dryRun, force });

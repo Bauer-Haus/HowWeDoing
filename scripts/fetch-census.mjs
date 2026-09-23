@@ -153,7 +153,9 @@ async function main() {
   );
   console.log(`Parsed ${incoming.length} jurisdictions from the Census API.`);
 
-  if (!result.problems.length || force) {
+  /* Stamp the vintage only when a value moved: re-stamping an unchanged
+     series would dirty the repo, and open a pull request, on every run. */
+  if ((!result.problems.length || force) && result.changes.length) {
     const touched = setVintage(['mhi', 'poverty', 'ba', 'uninsured'], `${YEAR} ACS 1-year, retrieved ${new Date().toISOString().slice(0, 10)}`, { dryRun });
     setVintage(['pop'], `July 1 ${POP_VINTAGE} estimate, retrieved ${new Date().toISOString().slice(0, 10)}`, { dryRun });
     if (touched.length && !dryRun) console.log(`Vintage updated for: ${touched.join(', ')}`);

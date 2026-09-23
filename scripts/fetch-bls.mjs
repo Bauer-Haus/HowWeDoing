@@ -159,7 +159,9 @@ async function main() {
   const result = mergeIntoStates(incoming, fields, { dryRun, source: 'BLS LAUS API' });
   console.log(`Parsed ${incoming.length} jurisdictions from BLS${period ? ` (latest observation: ${period})` : ''}.`);
 
-  if ((!result.problems.length || force) && period) {
+  /* Stamp the vintage only when a value moved: re-stamping an unchanged
+     series would dirty the repo, and open a pull request, on every run. */
+  if ((!result.problems.length || force) && period && result.changes.length) {
     setVintage(['unemp'], `${period}, seasonally adjusted, retrieved ${new Date().toISOString().slice(0, 10)}`, { dryRun });
   }
   reportAndExit(result, { dryRun, force });

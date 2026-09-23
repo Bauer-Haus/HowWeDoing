@@ -141,7 +141,9 @@ async function main() {
   });
   console.log(`Parsed ${incoming.length} jurisdictions from BEA for ${year} (prior year ${prevYear}).`);
 
-  if (!result.problems.length || force) {
+  /* Stamp the vintage only when a value moved: re-stamping an unchanged
+     series would dirty the repo, and open a pull request, on every run. */
+  if ((!result.problems.length || force) && result.changes.length) {
     const touched = setVintage(['gdp', 'pcpi'], `${year} annual, retrieved ${new Date().toISOString().slice(0, 10)}`, { dryRun });
     if (touched.length && !dryRun) console.log(`Vintage updated for: ${touched.join(', ')}`);
   }
