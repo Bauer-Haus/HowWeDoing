@@ -1,11 +1,11 @@
 {
   "asOf": "2026-09",
   "headline": {
-    "gdp": 30762000,
+    "gdp": 30762099,
     "gdpYear": 2025,
-    "realGrowth": 2.0,
-    "population": 342300000,
-    "pcpi": 73000,
+    "realGrowth": 2.1,
+    "population": 341784857,
+    "pcpi": 76393,
     "medianHouseholdIncome": 83700,
     "medianHouseholdIncomeSource": "CPS ASEC 2024 (state figures below use ACS 1-year, a different survey)",
     "povertyRate": 12.4,
@@ -14,14 +14,14 @@
     "lfpr": 62.3,
     "violentCrime": 359.1,
     "propertyCrime": 1858,
-    "murderRate": 5.0,
-    "uninsured": 8.0,
+    "murderRate": 5,
+    "uninsured": 8,
     "lifeExpectancy": 78.4,
     "lifeExpectancyYear": 2023,
     "homeownership": 65.1,
-    "bachelorsPlus": 35.0,
-    "federalTopIncomeRate": 37.0,
-    "federalCorporateRate": 21.0,
+    "bachelorsPlus": 35,
+    "federalTopIncomeRate": 37,
+    "federalCorporateRate": 21,
     "federalGasTax": 18.4,
     "federalMinimumWage": 7.25
   },
@@ -49,7 +49,7 @@
     {
       "year": 2001,
       "nominal": 10582000,
-      "realGrowth": 1.0
+      "realGrowth": 1
     },
     {
       "year": 2002,
@@ -79,7 +79,7 @@
     {
       "year": 2007,
       "nominal": 14452000,
-      "realGrowth": 2.0
+      "realGrowth": 2
     },
     {
       "year": 2008,
@@ -134,7 +134,7 @@
     {
       "year": 2018,
       "nominal": 20533000,
-      "realGrowth": 3.0
+      "realGrowth": 3
     },
     {
       "year": 2019,
@@ -163,39 +163,39 @@
     },
     {
       "year": 2024,
-      "nominal": 29298000,
+      "nominal": 29298013,
       "realGrowth": 2.8
     },
     {
       "year": 2025,
-      "nominal": 30762000,
-      "realGrowth": 2.0
+      "nominal": 30762099,
+      "realGrowth": 2.1
     }
   ],
   "industryMix": [
     {
       "sector": "Real estate, rental and leasing",
-      "share": 13.0
+      "share": 13
     },
     {
       "sector": "Professional and business services",
-      "share": 13.0
+      "share": 13
     },
     {
       "sector": "Government",
-      "share": 11.0
+      "share": 11
     },
     {
       "sector": "Manufacturing",
-      "share": 10.0
+      "share": 10
     },
     {
       "sector": "Finance and insurance",
-      "share": 8.0
+      "share": 8
     },
     {
       "sector": "Health care and social assistance",
-      "share": 8.0
+      "share": 8
     },
     {
       "sector": "Information",
@@ -203,7 +203,7 @@
     },
     {
       "sector": "Wholesale trade",
-      "share": 6.0
+      "share": 6
     },
     {
       "sector": "Retail trade",
@@ -263,7 +263,7 @@
     },
     {
       "year": 2005,
-      "violent": 469.0,
+      "violent": 469,
       "property": 3431.5,
       "murder": 5.6
     },
@@ -299,8 +299,8 @@
     },
     {
       "year": 2021,
-      "violent": 387.0,
-      "property": 1933.0,
+      "violent": 387,
+      "property": 1933,
       "murder": 6.8
     },
     {
@@ -318,8 +318,8 @@
     {
       "year": 2024,
       "violent": 359.1,
-      "property": 1858.0,
-      "murder": 5.0
+      "property": 1858,
+      "murder": 5
     }
   ],
   "regions": [

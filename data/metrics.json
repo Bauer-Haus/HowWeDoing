@@ -332,14 +332,14 @@
     "bea-gdp": {
       "agency": "US Bureau of Economic Analysis",
       "series": "GDP by State (SQGDP/SAGDP)",
-      "vintage": "2025 annual, released 2026",
+      "vintage": "2025 annual, retrieved 2026-09-23",
       "url": "https://www.bea.gov/data/gdp/gdp-state",
       "cadence": "annual"
     },
     "bea-income": {
       "agency": "US Bureau of Economic Analysis",
       "series": "State Personal Income (SAINC1)",
-      "vintage": "2025",
+      "vintage": "2025 annual, retrieved 2026-09-23",
       "url": "https://www.bea.gov/data/income-saving/personal-income-by-state",
       "cadence": "annual"
     },
@@ -360,14 +360,14 @@
     "census-acs": {
       "agency": "US Census Bureau",
       "series": "American Community Survey, 1-year estimates",
-      "vintage": "2024",
+      "vintage": "2024 ACS 1-year, retrieved 2026-09-23",
       "url": "https://www.census.gov/programs-surveys/acs",
       "cadence": "annual"
     },
     "census-pop": {
       "agency": "US Census Bureau",
       "series": "Population Estimates Program, Vintage 2025",
-      "vintage": "July 1 2025",
+      "vintage": "July 1 2025 Census estimate (via BEA SAINC1), retrieved 2026-09-23",
       "url": "https://www.census.gov/programs-surveys/popest.html",
       "cadence": "annual"
     },
@@ -388,7 +388,7 @@
     "fbi-crime": {
       "agency": "FBI",
       "series": "Uniform Crime Reporting / Crime Data Explorer",
-      "vintage": "2024",
+      "vintage": "2024, agency-reported (CDE summarized), retrieved 2026-09-23",
       "url": "https://cde.ucr.cjis.gov/",
       "cadence": "annual"
     },
