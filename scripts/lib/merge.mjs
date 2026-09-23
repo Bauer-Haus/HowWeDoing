@@ -23,7 +23,33 @@ export const RANGES = {
   ownRate: [35, 85],
   ba: [20, 70],
   uninsured: [1, 20],
+  unemp: [1, 15],
+  lfpr: [50, 75],
+  vcrime: [50, 1500],
+  pcrime: [500, 6000],
+  murder: [0.5, 40],
 };
+
+/* Fields that are not metrics in their own right take their source from one
+   that is. */
+const SOURCE_OF = { gdpPrev: 'gdp' };
+
+/**
+ * Whether a field has previously been fetched from its agency's API.
+ *
+ * The movement limit below exists to catch a bad revision between two real
+ * releases. Until a series has been fetched once, the stored values are the
+ * compiled snapshot rather than an earlier release, and comparing an API
+ * value against them measures the snapshot's error, not the release's. A
+ * successful fetch stamps "retrieved <date>" into the source's vintage, which
+ * is what this reads.
+ */
+export function previouslyFetched(field) {
+  const metrics = readJson('data/metrics.json');
+  const def = metrics.metrics[SOURCE_OF[field] || field];
+  const src = def && metrics.sources[def.source];
+  return Boolean(src && /retrieved \d{4}-\d{2}-\d{2}/.test(src.vintage || ''));
+}
 
 /**
  * How far a single value may move in one refresh before it is treated as a
@@ -62,6 +88,13 @@ export function mergeIntoStates(incoming, fields, opts = {}) {
   const problems = [];
   const changes = [];
   const seen = new Set();
+  /* enforceMovement applies the limit regardless of fetch history, so tests
+     can exercise it deterministically whatever state the repository is in. */
+  const firstFetch = opts.enforceMovement ? [] : fields.filter((f) => !previouslyFetched(f));
+  if (firstFetch.length && !opts.quiet) {
+    console.log(`First fetch from the source for: ${firstFetch.join(', ')} — replacing compiled values, so the ` +
+      'movement limit is not applied; range and completeness checks still are.');
+  }
 
   for (const row of incoming) {
     const target = byAbbr[row.abbr];
@@ -83,7 +116,7 @@ export function mergeIntoStates(incoming, fields, opts = {}) {
         continue;
       }
       const prev = target[f];
-      if (typeof prev === 'number' && prev !== 0) {
+      if (typeof prev === 'number' && prev !== 0 && !firstFetch.includes(f)) {
         const limit = TOLERANCE[f] || { rel: tolerance ?? DEFAULT_TOLERANCE.rel };
         if (limit.abs !== undefined) {
           const move = Math.abs(next - prev);

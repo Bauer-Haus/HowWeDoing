@@ -13,7 +13,7 @@ import { parseBea, isState, isBadTableName } from './fetch-bea.mjs';
 import { parseCensus } from './fetch-census.mjs';
 import { parseBls, seriesId, parseSeriesId } from './fetch-bls.mjs';
 import { parseCdeSummary } from './fetch-fbi.mjs';
-import { mergeIntoStates, readJson } from './lib/merge.mjs';
+import { mergeIntoStates, readJson, previouslyFetched } from './lib/merge.mjs';
 import { num } from './lib/http.mjs';
 
 let failures = 0;
@@ -209,36 +209,50 @@ checkTrue('parseCdeSummary never falls back to the national series', threw && /n
 const states = readJson('data/states.json');
 const good = states.map((s) => ({ abbr: s.abbr, mhi: s.mhi }));
 
-const clean = mergeIntoStates(good, ['mhi'], { dryRun: true });
+const clean = mergeIntoStates(good, ['mhi'], { dryRun: true, quiet: true });
 check('merge accepts an unchanged full response', [clean.problems.length, clean.changes.length], [0, 0]);
 
-const short = mergeIntoStates(good.slice(0, 40), ['mhi'], { dryRun: true });
+const short = mergeIntoStates(good.slice(0, 40), ['mhi'], { dryRun: true, quiet: true });
 checkTrue('merge rejects a short response', short.problems.some((p) => /omitted 11 jurisdiction/.test(p)), short.problems[0]);
 
 const outOfRange = good.map((r, i) => (i === 0 ? { ...r, mhi: 5 } : r));
-checkTrue('merge rejects an implausible value', mergeIntoStates(outOfRange, ['mhi'], { dryRun: true }).problems.some((p) => /outside the plausible range/.test(p)));
+checkTrue('merge rejects an implausible value', mergeIntoStates(outOfRange, ['mhi'], { dryRun: true, quiet: true }).problems.some((p) => /outside the plausible range/.test(p)));
 
 const wildSwing = good.map((r, i) => (i === 0 ? { ...r, mhi: Math.round(r.mhi * 1.8) } : r));
-checkTrue('merge rejects an unexplained 80% jump', mergeIntoStates(wildSwing, ['mhi'], { dryRun: true }).problems.some((p) => /beyond the 35% sanity limit/.test(p)));
+checkTrue('merge rejects an unexplained 80% jump', mergeIntoStates(wildSwing, ['mhi'], { dryRun: true, quiet: true, enforceMovement: true }).problems.some((p) => /beyond the 35% sanity limit/.test(p)));
 
 const nullValue = good.map((r, i) => (i === 0 ? { ...r, mhi: null } : r));
-checkTrue('merge rejects a missing value', mergeIntoStates(nullValue, ['mhi'], { dryRun: true }).problems.some((p) => /missing from the response/.test(p)));
+checkTrue('merge rejects a missing value', mergeIntoStates(nullValue, ['mhi'], { dryRun: true, quiet: true }).problems.some((p) => /missing from the response/.test(p)));
 
 const unknown = [...good, { abbr: 'ZZ', mhi: 70000 }];
-checkTrue('merge rejects an unknown jurisdiction', mergeIntoStates(unknown, ['mhi'], { dryRun: true }).problems.some((p) => /unknown jurisdiction/.test(p)));
+checkTrue('merge rejects an unknown jurisdiction', mergeIntoStates(unknown, ['mhi'], { dryRun: true, quiet: true }).problems.some((p) => /unknown jurisdiction/.test(p)));
 
 /* Rates are guarded in points, not percent: a real BLS release moved Ohio's
    unemployment 3.3 -> 4.7, which is 42% relative but a routine 1.4 points. */
 const rateRows = states.map((s) => ({ abbr: s.abbr, unemp: s.unemp }));
 const routineRateMove = rateRows.map((r, i) => (i === 0 ? { ...r, unemp: r.unemp + 1.4 } : r));
-const routine = mergeIntoStates(routineRateMove, ['unemp'], { dryRun: true });
+const routine = mergeIntoStates(routineRateMove, ['unemp'], { dryRun: true, quiet: true, enforceMovement: true });
 check('merge accepts a routine 1.4-point rate move', [routine.problems.length, routine.changes.length], [0, 1]);
 
 const wildRateMove = rateRows.map((r, i) => (i === 0 ? { ...r, unemp: r.unemp + 6 } : r));
-checkTrue('merge rejects a 6-point rate jump', mergeIntoStates(wildRateMove, ['unemp'], { dryRun: true }).problems.some((p) => /point sanity limit/.test(p)));
+checkTrue('merge rejects a 6-point rate jump', mergeIntoStates(wildRateMove, ['unemp'], { dryRun: true, quiet: true, enforceMovement: true }).problems.some((p) => /point sanity limit/.test(p)));
+
+/* A series never fetched before holds compiled values, not an earlier release,
+   so the first import may move it far: a live run moved Vermont's violent
+   crime rate from the compiled 150 to the FBI's 226.8. The movement limit
+   applies once the series has been fetched; ranges apply always. */
+if (!previouslyFetched('vcrime')) {
+  const crimeRows = states.map((s) => ({ abbr: s.abbr, vcrime: s.vcrime }));
+  const firstImport = crimeRows.map((r, i) => (i === 0 ? { ...r, vcrime: Number((r.vcrime * 1.51).toFixed(1)) } : r));
+  const fi = mergeIntoStates(firstImport, ['vcrime'], { dryRun: true, quiet: true });
+  check('merge accepts a large move on a first fetch', [fi.problems.length, fi.changes.length], [0, 1]);
+  const absurd = crimeRows.map((r, i) => (i === 0 ? { ...r, vcrime: 9000 } : r));
+  checkTrue('merge still range-checks a first fetch', mergeIntoStates(absurd, ['vcrime'], { dryRun: true, quiet: true }).problems.some((p) => /plausible range/.test(p)));
+}
+check('a series fetched before keeps its movement limit', previouslyFetched('unemp'), true);
 
 const smallMove = good.map((r, i) => (i === 0 ? { ...r, mhi: r.mhi + 500 } : r));
-const moved = mergeIntoStates(smallMove, ['mhi'], { dryRun: true });
+const moved = mergeIntoStates(smallMove, ['mhi'], { dryRun: true, quiet: true });
 check('merge accepts and reports a normal revision', [moved.problems.length, moved.changes.length], [0, 1]);
 
 /* ---------- end-to-end fixture runs ---------- */

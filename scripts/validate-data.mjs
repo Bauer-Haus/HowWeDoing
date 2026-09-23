@@ -198,9 +198,31 @@ for (const [, metric] of anchors) {
   }
 }
 
+/* Once a series is fetched from its agency, the API is the published source
+   and an exact anchor on the hand-compiled figure would fail on the first real
+   import (BEA reports California's GDP to a tenth of a million, not the
+   rounded figure anchored here; the FBI's agency-reported rates differ
+   slightly from its published estimates). Those anchors become sanity checks:
+   within 10% passes, which still catches a wrong table, line code or unit. */
+const fetchedSeries = (metric) => {
+  const def = metrics.metrics[metric];
+  const src = def && metrics.sources[def.source];
+  return Boolean(src && /retrieved \d{4}-\d{2}-\d{2}/.test(src.vintage || ''));
+};
+const ANCHOR_TOLERANCE = 0.10;
+let sanityAnchors = 0;
 for (const [abbr, metric, expected, why] of anchors) {
   const got = byAbbr[abbr]?.[metric];
-  if (got !== expected) fail(`anchor drift — ${abbr}.${metric} is ${got}, expected ${expected} (${why})`);
+  if (fetchedSeries(metric)) {
+    sanityAnchors++;
+    const off = typeof got === 'number' ? Math.abs(got - expected) / Math.abs(expected) : Infinity;
+    if (off > ANCHOR_TOLERANCE) {
+      fail(`anchor sanity — ${abbr}.${metric} is ${got}, ${(off * 100).toFixed(0)}% from the published ${expected} (${why}); ` +
+        'more than 10% suggests the fetcher read the wrong table, line or unit');
+    }
+  } else if (got !== expected) {
+    fail(`anchor drift — ${abbr}.${metric} is ${got}, expected ${expected} (${why})`);
+  }
 }
 
 /* combined sales tax anchors (state + average local, as published) */
@@ -231,6 +253,7 @@ for (const w of warnings) console.log(`warn  ${w}`);
 for (const e of errors) console.log(`FAIL  ${e}`);
 
 console.log('');
-console.log(`${states.length} jurisdictions · ${Object.keys(metrics.metrics).length} series · ${anchors.length + salesAnchors.length} published anchors checked`);
+console.log(`${states.length} jurisdictions · ${Object.keys(metrics.metrics).length} series · ${anchors.length + salesAnchors.length} published anchors checked` +
+  (sanityAnchors ? ` (${sanityAnchors} as ±10% sanity checks on API-fetched series)` : ''));
 console.log(`${errors.length} error(s), ${warnings.length} warning(s)`);
 process.exit(errors.length ? 1 : 0);

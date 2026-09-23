@@ -85,6 +85,11 @@ write('bea-sainc1.json', beaEnvelope('SAINC1', 'Dollars', [
   ...states.map((s) => beaRow('SAINC1', s.fips + '000', s.name, GDP_YEAR, s.pcpi, 'Dollars')),
 ]));
 
+write('bea-sainc1-pop.json', beaEnvelope('SAINC1', 'Number of persons', [
+  ...noise('SAINC1', 'Number of persons', 342300000),
+  ...states.map((s) => beaRow('SAINC1', s.fips + '000', s.name, GDP_YEAR, s.pop, 'Number of persons')),
+]));
+
 /* ---- Census ---- */
 
 write('census-acs-detail.json', [
