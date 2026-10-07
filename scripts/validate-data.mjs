@@ -227,15 +227,27 @@ const fetchedSeries = (metric) => {
   const src = def && metrics.sources[def.source];
   return Boolean(src && /retrieved \d{4}-\d{2}-\d{2}/.test(src.vintage || ''));
 };
-const ANCHOR_TOLERANCE = 0.10;
+/* Agencies revise: BEA's annual update (30 September 2026) moved New York's
+   2025 real growth from the preliminary 2.9% to 2.5%. The sanity band must
+   absorb revisions like that while still catching a misread. A rate is judged
+   in percentage points, not in percent of itself — 2.9 to 2.5 is a routine
+   0.4-point revision but "14% off" — and 1.5 points still separates real from
+   nominal growth. Levels (dollars, counts, rates per 100,000) keep ±10%. */
+const ANCHOR_REL = 0.10;
+const ANCHOR_POINTS = 1.5;
 let sanityAnchors = 0;
 for (const [abbr, metric, expected, why] of anchors) {
   const got = byAbbr[abbr]?.[metric];
   if (fetchedSeries(metric)) {
     sanityAnchors++;
-    const off = typeof got === 'number' ? Math.abs(got - expected) / Math.abs(expected) : Infinity;
-    if (off > ANCHOR_TOLERANCE) {
-      fail(`anchor sanity — ${abbr}.${metric} is ${got}, ${(off * 100).toFixed(0)}% from the published ${expected} (${why}); ` +
+    const isRate = /^pct/.test(metrics.metrics[metric].format);
+    if (typeof got !== 'number') {
+      fail(`anchor sanity — ${abbr}.${metric} is missing (${why})`);
+    } else if (isRate && Math.abs(got - expected) > ANCHOR_POINTS) {
+      fail(`anchor sanity — ${abbr}.${metric} is ${got}, ${Math.abs(got - expected).toFixed(1)} points from the published ${expected} (${why}); ` +
+        `more than ${ANCHOR_POINTS} points suggests the fetcher read the wrong table, line or unit`);
+    } else if (!isRate && Math.abs(got - expected) / Math.abs(expected) > ANCHOR_REL) {
+      fail(`anchor sanity — ${abbr}.${metric} is ${got}, ${((Math.abs(got - expected) / Math.abs(expected)) * 100).toFixed(0)}% from the published ${expected} (${why}); ` +
         'more than 10% suggests the fetcher read the wrong table, line or unit');
     }
   } else if (got !== expected) {
@@ -283,6 +295,6 @@ if (process.env.GITHUB_ACTIONS === 'true') {
 
 console.log('');
 console.log(`${states.length} jurisdictions · ${Object.keys(metrics.metrics).length} series · ${anchors.length + salesAnchors.length} published anchors checked` +
-  (sanityAnchors ? ` (${sanityAnchors} as ±10% sanity checks on API-fetched series)` : ''));
+  (sanityAnchors ? ` (${sanityAnchors} as sanity bands on API-fetched series: ±1.5 points for rates, ±10% for levels)` : ''));
 console.log(`${errors.length} error(s), ${warnings.length} warning(s)`);
 process.exit(errors.length ? 1 : 0);
