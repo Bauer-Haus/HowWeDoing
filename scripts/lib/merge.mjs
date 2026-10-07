@@ -189,6 +189,11 @@ export function reportAndExit(result, { dryRun, force }) {
   if (result.problems.length && !force) {
     console.error('\nRefusing to write — the response did not pass its checks:');
     for (const p of result.problems) console.error('  ' + p);
+    if (process.env.GITHUB_ACTIONS === 'true') {
+      const esc = (m) => String(m).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+      result.problems.slice(0, 9).forEach((p) => console.log(`::error title=${result.source} refused::${esc(p)}`));
+      if (result.problems.length > 9) console.log(`::error title=${result.source} refused::…and ${result.problems.length - 9} more`);
+    }
     console.error('\nNothing was changed. Fix the source or pass --force to override.');
     process.exit(1);
   }

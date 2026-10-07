@@ -270,6 +270,17 @@ if (nh.murderRate !== national.crimeHistory.at(-1).murder) fail('headline homici
 for (const w of warnings) console.log(`warn  ${w}`);
 for (const e of errors) console.log(`FAIL  ${e}`);
 
+/* In GitHub Actions, also emit each finding as an annotation. Annotations show
+   on the run's summary page and through the API, so the reason for a failed
+   refresh is readable without opening (or being able to reach) the raw log.
+   GitHub keeps at most ten errors per step, so the first ten carry detail. */
+if (process.env.GITHUB_ACTIONS === 'true') {
+  const esc = (m) => String(m).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
+  errors.slice(0, 9).forEach((e) => console.log(`::error title=Validation failed::${esc(e)}`));
+  if (errors.length > 9) console.log(`::error title=Validation failed::…and ${errors.length - 9} more — see the step log`);
+  warnings.slice(0, 5).forEach((w) => console.log(`::warning title=Validation warning::${esc(w)}`));
+}
+
 console.log('');
 console.log(`${states.length} jurisdictions · ${Object.keys(metrics.metrics).length} series · ${anchors.length + salesAnchors.length} published anchors checked` +
   (sanityAnchors ? ` (${sanityAnchors} as ±10% sanity checks on API-fetched series)` : ''));
