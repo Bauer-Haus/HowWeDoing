@@ -33,8 +33,14 @@ const val = (f, d) => {
 const dryRun = has('--dry-run');
 const force = has('--force');
 const fixture = has('--fixture');
-const YEAR = Number(val('--year', new Date().getFullYear() - 2));
-const POP_VINTAGE = Number(val('--pop-vintage', YEAR + 1));
+/* The ACS 1-year release for a year normally lands the following September,
+   but can slip (the 2025 release was postponed in 2026). Without --year the
+   newest year is tried first and the one before is used until it appears. */
+const THIS_YEAR = new Date().getFullYear();
+const YEAR_ARG = val('--year', null);
+const CANDIDATE_YEARS = YEAR_ARG ? [Number(YEAR_ARG)] : [THIS_YEAR - 1, THIS_YEAR - 2];
+let YEAR = CANDIDATE_YEARS[0];
+const POP_VINTAGE = Number(val('--pop-vintage', THIS_YEAR - 1));
 const KEY = process.env.CENSUS_API_KEY;
 
 const keyParam = KEY ? `&key=${encodeURIComponent(KEY)}` : '';
@@ -87,11 +93,24 @@ async function main() {
     const detailVars = 'NAME,B19013_001E,B19301_001E,B25077_001E,B25003_001E,B25003_002E';
     const subjectVars = 'NAME,S1701_C03_001E,S1501_C02_015E,S2701_C05_001E';
 
+    /* An unreleased ACS year has no endpoint at all, so a 404 on the detail
+       table means "not out yet": fall back to the year before. */
+    for (const y of CANDIDATE_YEARS) {
+      try {
+        detail = parseCensus(
+          await getJson(`https://api.census.gov/data/${y}/acs/acs1?get=${detailVars}&for=state:*${keyParam}`, { label: `acs1 ${y} detail`, attempts: 2 }),
+          'acs1 detail'
+        );
+        YEAR = y;
+        break;
+      } catch (err) {
+        if (err instanceof EgressBlocked || err.missingKey) throw err;
+        const notOut = err.status === 404;
+        if (!notOut || y === CANDIDATE_YEARS[CANDIDATE_YEARS.length - 1]) throw err;
+        console.log(`  ACS ${y} 1-year estimates are not published yet — using ${y - 1}`);
+      }
+    }
     console.log(`Fetching ACS ${YEAR} 1-year estimates …`);
-    detail = parseCensus(
-      await getJson(`https://api.census.gov/data/${YEAR}/acs/acs1?get=${detailVars}&for=state:*${keyParam}`, { label: 'acs1 detail' }),
-      'acs1 detail'
-    );
     subject = parseCensus(
       await getJson(`https://api.census.gov/data/${YEAR}/acs/acs1/subject?get=${subjectVars}&for=state:*${keyParam}`, { label: 'acs1 subject' }),
       'acs1 subject'

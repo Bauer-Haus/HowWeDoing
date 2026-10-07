@@ -30,8 +30,11 @@ on:
         type: boolean
         default: false
   schedule:
-    # 12:00 UTC on the 3rd of each month, after the agencies' usual releases
-    - cron: '0 12 3 * *'
+    # 12:00 UTC on the 25th. BLS publishes state unemployment around the 20th
+    # of each month, so this picks up each release a few days after it lands.
+    # The quarterly and annual sources (BEA, FBI, Census) are caught on the
+    # next run after they publish.
+    - cron: '0 12 25 * *'
 
 permissions:
   contents: write

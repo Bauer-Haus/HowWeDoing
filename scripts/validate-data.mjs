@@ -179,31 +179,35 @@ if (national.gdpHistory.at(-1).nominal !== national.headline.gdp) {
    a statutory tax rate. A monthly series like unemployment is *supposed* to
    move every time it is fetched, so anchoring it guarantees a false failure —
    the cadence check below refuses to let one be added. */
+/* Each anchor names the reference year it describes. A fetched series that has
+   moved on to a newer year (crime from 2024 to 2025, say) supersedes its old
+   anchors: comparing 2025 rates with 2024 values would flag real change as
+   error. Hand-maintained series are always held to their anchors exactly. */
 const anchors = [
-  ['CA', 'gdp', 4251000, 'BEA 2025: California $4.251T'],
-  ['TX', 'gdp', 2904000, 'BEA 2025: Texas $2.904T'],
-  ['NY', 'gdp', 2468000, 'BEA 2025: New York $2.468T'],
-  ['FL', 'gdp', 1835000, 'BEA 2025: Florida $1.835T'],
-  ['VT', 'gdp', 48350, 'BEA 2025: Vermont $48.35B — smallest state economy'],
-  ['WY', 'gdp', 52622, 'BEA 2025: Wyoming $52.622B'],
-  ['AK', 'gdp', 75012, 'BEA 2025: Alaska $75.012B'],
-  ['MA', 'mhi', 104828, 'ACS 2024: Massachusetts, highest median household income'],
-  ['MD', 'mhi', 102905, 'ACS 2024: Maryland'],
-  ['MS', 'mhi', 59127, 'ACS 2024: Mississippi, lowest median household income'],
-  ['AK', 'vcrime', 724.1, 'FBI 2024: Alaska, highest violent crime rate'],
-  ['NM', 'vcrime', 717.1, 'FBI 2024: New Mexico'],
-  ['ME', 'vcrime', 100.1, 'FBI 2024: Maine, lowest violent crime rate'],
-  ['NH', 'vcrime', 110.1, 'FBI 2024: New Hampshire'],
-  ['CA', 'itaxTop', 13.3, 'Tax Foundation 2026: California, highest top marginal rate'],
-  ['OK', 'itaxTop', 4.5, 'Tax Foundation 2026: Oklahoma, cut from 4.75% for 2026'],
-  ['MT', 'itaxTop', 5.65, 'Tax Foundation 2026: Montana, cut from 5.9% for 2026'],
-  ['NJ', 'propTax', 1.88, 'Tax Foundation 2026: New Jersey, highest effective property tax rate'],
-  ['IL', 'propTax', 1.88, 'Tax Foundation 2026: Illinois, tied highest'],
-  ['HI', 'propTax', 0.29, 'Tax Foundation 2026: Hawaii, lowest effective property tax rate'],
-  ['NJ', 'corpTax', 11.5, 'Tax Foundation 2026: New Jersey, highest corporate rate'],
-  ['FL', 'growth', 3.1, 'BEA 2025: Florida, joint-fastest real growth'],
-  ['SC', 'growth', 3.1, 'BEA 2025: South Carolina, joint-fastest real growth'],
-  ['NY', 'growth', 2.9, 'BEA 2025: New York'],
+  ['CA', 'gdp', 4251000, 'BEA 2025: California $4.251T', 2025],
+  ['TX', 'gdp', 2904000, 'BEA 2025: Texas $2.904T', 2025],
+  ['NY', 'gdp', 2468000, 'BEA 2025: New York $2.468T', 2025],
+  ['FL', 'gdp', 1835000, 'BEA 2025: Florida $1.835T', 2025],
+  ['VT', 'gdp', 48350, 'BEA 2025: Vermont $48.35B — smallest state economy', 2025],
+  ['WY', 'gdp', 52622, 'BEA 2025: Wyoming $52.622B', 2025],
+  ['AK', 'gdp', 75012, 'BEA 2025: Alaska $75.012B', 2025],
+  ['MA', 'mhi', 104828, 'ACS 2024: Massachusetts, highest median household income', 2024],
+  ['MD', 'mhi', 102905, 'ACS 2024: Maryland', 2024],
+  ['MS', 'mhi', 59127, 'ACS 2024: Mississippi, lowest median household income', 2024],
+  ['AK', 'vcrime', 724.1, 'FBI 2024: Alaska, highest violent crime rate', 2024],
+  ['NM', 'vcrime', 717.1, 'FBI 2024: New Mexico', 2024],
+  ['ME', 'vcrime', 100.1, 'FBI 2024: Maine, lowest violent crime rate', 2024],
+  ['NH', 'vcrime', 110.1, 'FBI 2024: New Hampshire', 2024],
+  ['CA', 'itaxTop', 13.3, 'Tax Foundation 2026: California, highest top marginal rate', 2026],
+  ['OK', 'itaxTop', 4.5, 'Tax Foundation 2026: Oklahoma, cut from 4.75% for 2026', 2026],
+  ['MT', 'itaxTop', 5.65, 'Tax Foundation 2026: Montana, cut from 5.9% for 2026', 2026],
+  ['NJ', 'propTax', 1.88, 'Tax Foundation 2026: New Jersey, highest effective property tax rate', 2026],
+  ['IL', 'propTax', 1.88, 'Tax Foundation 2026: Illinois, tied highest', 2026],
+  ['HI', 'propTax', 0.29, 'Tax Foundation 2026: Hawaii, lowest effective property tax rate', 2026],
+  ['NJ', 'corpTax', 11.5, 'Tax Foundation 2026: New Jersey, highest corporate rate', 2026],
+  ['FL', 'growth', 3.1, 'BEA 2025: Florida, joint-fastest real growth', 2025],
+  ['SC', 'growth', 3.1, 'BEA 2025: South Carolina, joint-fastest real growth', 2025],
+  ['NY', 'growth', 2.9, 'BEA 2025: New York', 2025],
 ];
 
 const byAbbr = Object.fromEntries(states.map((s) => [s.abbr, s]));
@@ -236,8 +240,18 @@ const fetchedSeries = (metric) => {
 const ANCHOR_REL = 0.10;
 const ANCHOR_POINTS = 1.5;
 let sanityAnchors = 0;
-for (const [abbr, metric, expected, why] of anchors) {
+let supersededAnchors = 0;
+const seriesYear = (metric) => {
+  const def = metrics.metrics[metric];
+  const m = /\b(19|20)\d{2}\b/.exec((def && metrics.sources[def.source] && metrics.sources[def.source].vintage) || '');
+  return m ? Number(m[0]) : null;
+};
+for (const [abbr, metric, expected, why, refYear] of anchors) {
   const got = byAbbr[abbr]?.[metric];
+  if (fetchedSeries(metric) && seriesYear(metric) !== null && seriesYear(metric) !== refYear) {
+    supersededAnchors++;
+    continue;
+  }
   if (fetchedSeries(metric)) {
     sanityAnchors++;
     const isRate = /^pct/.test(metrics.metrics[metric].format);
@@ -295,6 +309,7 @@ if (process.env.GITHUB_ACTIONS === 'true') {
 
 console.log('');
 console.log(`${states.length} jurisdictions · ${Object.keys(metrics.metrics).length} series · ${anchors.length + salesAnchors.length} published anchors checked` +
-  (sanityAnchors ? ` (${sanityAnchors} as sanity bands on API-fetched series: ±1.5 points for rates, ±10% for levels)` : ''));
+  (sanityAnchors ? ` (${sanityAnchors} as sanity bands on API-fetched series: ±1.5 points for rates, ±10% for levels)` : '') +
+  (supersededAnchors ? ` · ${supersededAnchors} superseded by a newer reference year` : ''));
 console.log(`${errors.length} error(s), ${warnings.length} warning(s)`);
 process.exit(errors.length ? 1 : 0);

@@ -31,7 +31,13 @@ const val = (f, d) => {
 const dryRun = has('--dry-run');
 const force = has('--force');
 const fixture = has('--fixture');
-const YEAR = Number(val('--year', new Date().getFullYear() - 1));
+/* A year's annual state GDP first appears in late March of the following
+   year. Without --year, last year is tried first and, if BEA has not published
+   it for every state yet (January to March), the year before is used. */
+const THIS_YEAR = new Date().getFullYear();
+const YEAR_ARG = val('--year', null);
+const CANDIDATE_YEARS = YEAR_ARG ? [Number(YEAR_ARG)] : [THIS_YEAR - 1, THIS_YEAR - 2];
+let YEAR = CANDIDATE_YEARS[0];
 const KEY = process.env.BEA_API_KEY;
 
 const BASE = 'https://apps.bea.gov/api/data/';
@@ -183,15 +189,32 @@ async function main() {
     raw.income = readFixture('bea-sainc1.json');
     raw.population = readFixture('bea-sainc1-pop.json');
   } else {
-    const years = `${YEAR - 1},${YEAR}`;
-    console.log(`Fetching BEA Regional data for ${years} …`);
-    raw.gdpNominal = await fetchTable(TABLES.gdpNominal, { LineCode: '1', GeoFips: 'STATE', Year: years });
-    raw.gdpReal = await fetchTable(TABLES.gdpReal, { LineCode: '1', GeoFips: 'STATE', Year: years });
-    raw.income = await fetchTable(TABLES.income, { LineCode: '3', GeoFips: 'STATE', Year: String(YEAR) });
-    /* SAINC1 line 2 is the midyear population BEA divides by for per-capita
-       income: the Census Bureau's own estimate, and the population API the
-       Census fetcher can no longer reach. */
-    raw.population = await fetchTable(TABLES.income, { LineCode: '2', GeoFips: 'STATE', Year: String(YEAR) });
+    for (const y of CANDIDATE_YEARS) {
+      const last = y === CANDIDATE_YEARS[CANDIDATE_YEARS.length - 1];
+      try {
+        const years = `${y - 1},${y}`;
+        console.log(`Fetching BEA Regional data for ${years} …`);
+        raw.gdpNominal = await fetchTable(TABLES.gdpNominal, { LineCode: '1', GeoFips: 'STATE', Year: years });
+        /* Published means a value for (nearly) every jurisdiction, not just a
+           response: BEA can answer for a year it has only partly filled. */
+        const covered = Object.values(parseBea(raw.gdpNominal, 'GDP')).filter((v) => v[y] !== undefined).length;
+        if (covered < 50 && !last) {
+          console.log(`  ${y} annual GDP covers only ${covered} jurisdictions — using ${y - 1}`);
+          continue;
+        }
+        raw.gdpReal = await fetchTable(TABLES.gdpReal, { LineCode: '1', GeoFips: 'STATE', Year: years });
+        raw.income = await fetchTable(TABLES.income, { LineCode: '3', GeoFips: 'STATE', Year: String(y) });
+        /* SAINC1 line 2 is the midyear population BEA divides by for per-capita
+           income: the Census Bureau's own estimate, and the population API the
+           Census fetcher can no longer reach. */
+        raw.population = await fetchTable(TABLES.income, { LineCode: '2', GeoFips: 'STATE', Year: String(y) });
+        YEAR = y;
+        break;
+      } catch (err) {
+        if (err instanceof EgressBlocked || last) throw err;
+        console.log(`  ${y} not available (${String(err.message).split('\n')[0].slice(0, 90)}) — using ${y - 1}`);
+      }
+    }
   }
   const gdpNominal = parseBea(raw.gdpNominal, 'GDP');
   const gdpReal = parseBea(raw.gdpReal, 'real GDP');

@@ -184,7 +184,8 @@ BLS needs no API key, so a run with no secrets configured refreshes
 unemployment and labour force participation for all 51 jurisdictions. The other
 three sources each need a key (`BEA_API_KEY`, `CENSUS_API_KEY`, `FBI_API_KEY`)
 as repository secrets; a missing key skips that source rather than failing the
-run. It also runs monthly on its own.
+run. It also runs on its own on the 25th of each month, a few days after BLS
+publishes its monthly state figures (around the 20th).
 
 If the repository does not allow Actions to open pull requests, the branch is
 still pushed and the run summary carries the link to open it by hand.

@@ -3,7 +3,7 @@
  * Pulls state crime rates from the FBI Crime Data Explorer API into
  * data/states.json.
  *
- *   FBI_API_KEY=... node scripts/fetch-fbi.mjs [--year 2024] [--dry-run] [--force]
+ *   FBI_API_KEY=... node scripts/fetch-fbi.mjs [--year 2025] [--dry-run] [--force]
  *   FBI_API_KEY=... node scripts/fetch-fbi.mjs --probe
  *
  * The key is an api.data.gov key from https://api.data.gov/signup/. DEMO_KEY
@@ -24,6 +24,11 @@
  * Each figure is that month's offences per 100,000 residents, so the annual
  * rate is the sum of the twelve months. A state missing any month is left
  * unchanged rather than given a rate built from part of a year.
+ *
+ * Without --year, the newest full year is used: last year is tried first and,
+ * if the FBI has not yet published all twelve months of it, the year before.
+ * (The full prior year normally lands in August; a fixed "two years back" rule
+ * left the site on 2024 crime for months after 2025 was out.)
  */
 import { realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -40,7 +45,10 @@ const val = (f, d) => {
 const dryRun = has('--dry-run');
 const force = has('--force');
 const fixture = has('--fixture');
-const YEAR = Number(val('--year', new Date().getFullYear() - 2));
+const THIS_YEAR = new Date().getFullYear();
+const YEAR_ARG = val('--year', null);
+/* Years to try, newest first. Fixture runs keep an explicit or fixed year. */
+const CANDIDATE_YEARS = YEAR_ARG ? [Number(YEAR_ARG)] : [THIS_YEAR - 1, THIS_YEAR - 2];
 const KEY = process.env.FBI_API_KEY || 'DEMO_KEY';
 const CDE = 'https://api.usa.gov/crime/fbi/cde';
 
@@ -91,10 +99,10 @@ export function parseCdeSummary(payload, stateName, year, label) {
    be read straight from a CI log. It writes nothing and redacts the key. */
 const PROBES = [
   '/lookup/states',
-  `/summarized/state/CA/V?from=01-${YEAR}&to=12-${YEAR}`,
-  `/summarized/state/CA/P?from=01-${YEAR}&to=12-${YEAR}`,
-  `/summarized/state/CA/HOM?from=01-${YEAR}&to=12-${YEAR}`,
-  `/estimate/state/CA/violent-crime?from=01-${YEAR}&to=12-${YEAR}`,
+  `/summarized/state/CA/V?from=01-${CANDIDATE_YEARS[0]}&to=12-${CANDIDATE_YEARS[0]}`,
+  `/summarized/state/CA/P?from=01-${CANDIDATE_YEARS[0]}&to=12-${CANDIDATE_YEARS[0]}`,
+  `/summarized/state/CA/HOM?from=01-${CANDIDATE_YEARS[0]}&to=12-${CANDIDATE_YEARS[0]}`,
+  `/estimate/state/CA/violent-crime?from=01-${CANDIDATE_YEARS[0]}&to=12-${CANDIDATE_YEARS[0]}`,
 ];
 
 async function probeEndpoints() {
@@ -113,12 +121,12 @@ async function probeEndpoints() {
 }
 
 /** Find which spelling of an offence code the CDE accepts, using one state. */
-async function resolveOffense(field, abbr, stateName) {
+async function resolveOffense(field, abbr, stateName, year) {
   const tried = [];
   for (const code of OFFENSES[field]) {
     try {
-      const payload = await getJson(summaryUrl(abbr, code, YEAR), { label: `FBI ${abbr} ${code}`, attempts: 2 });
-      parseCdeSummary(payload, stateName, YEAR, `FBI ${abbr} ${code}`);
+      const payload = await getJson(summaryUrl(abbr, code, year), { label: `FBI ${abbr} ${code} ${year}`, attempts: 2 });
+      parseCdeSummary(payload, stateName, year, `FBI ${abbr} ${code}`);
       return { code, payload };
     } catch (err) {
       if (err instanceof EgressBlocked) throw err;
@@ -153,7 +161,9 @@ async function main() {
     rates[s.abbr][field] = parsed.rate;
   };
 
+  let YEAR = CANDIDATE_YEARS[0];
   if (fixture) {
+    YEAR = YEAR_ARG ? Number(YEAR_ARG) : THIS_YEAR - 2;
     console.log('Using recorded fixtures (no network calls).');
     const fx = readFixture('fbi-summarized.json');
     for (const s of states) {
@@ -167,12 +177,40 @@ async function main() {
       console.error('FBI_API_KEY is not set — falling back to DEMO_KEY, which is rate limited far below a full run.');
       console.error('  Get a free key at https://api.data.gov/signup/ for a reliable run.\n');
     }
-    console.log(`Fetching FBI summarised crime for ${YEAR} across ${states.length} jurisdictions …`);
-
     const codes = {};
     const first = states[0];
-    for (const field of Object.keys(OFFENSES)) {
-      const { code, payload } = await resolveOffense(field, first.abbr, first.name);
+
+    /* Pick the newest year the FBI has published in full, judged on the first
+       state's violent-crime series: twelve months present means the year is out. */
+    let chosen = null;
+    for (const y of CANDIDATE_YEARS) {
+      try {
+        const { code, payload } = await resolveOffense('vcrime', first.abbr, first.name, y);
+        const parsed = parseCdeSummary(payload, first.name, y, `${first.abbr} vcrime`);
+        if (parsed.missing) {
+          console.log(`  ${y}: not yet complete (${parsed.missing.length} month(s) missing) — trying the year before`);
+          continue;
+        }
+        chosen = { year: y, code, parsed };
+        break;
+      } catch (err) {
+        if (err instanceof EgressBlocked) throw err;
+        if (y === CANDIDATE_YEARS[CANDIDATE_YEARS.length - 1]) throw err;
+        console.log(`  ${y}: not available (${String(err.message).split('\n')[0].slice(0, 90)}) — trying the year before`);
+      }
+    }
+    if (!chosen) {
+      const err = new Error(`No complete year of FBI data among ${CANDIDATE_YEARS.join(', ')}.`);
+      err.noEndpoint = true;
+      throw err;
+    }
+    YEAR = chosen.year;
+    codes.vcrime = chosen.code;
+    record(first, 'vcrime', chosen.parsed);
+    console.log(`Fetching FBI summarised crime for ${YEAR} across ${states.length} jurisdictions …`);
+
+    for (const field of ['pcrime', 'murder']) {
+      const { code, payload } = await resolveOffense(field, first.abbr, first.name, YEAR);
       codes[field] = code;
       record(first, field, parseCdeSummary(payload, first.name, YEAR, `${first.abbr} ${field}`));
     }
