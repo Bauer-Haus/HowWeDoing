@@ -1,11 +1,11 @@
 {
   "asOf": "2026-09",
   "headline": {
-    "gdp": 30762099,
+    "gdp": 30861292,
     "gdpYear": 2025,
-    "realGrowth": 2.1,
+    "realGrowth": 2.3,
     "population": 341784857,
-    "pcpi": 76393,
+    "pcpi": 77028,
     "medianHouseholdIncome": 83700,
     "medianHouseholdIncomeSource": "CPS ASEC 2024 (state figures below use ACS 1-year, a different survey)",
     "povertyRate": 12.4,
@@ -163,13 +163,13 @@
     },
     {
       "year": 2024,
-      "nominal": 29298013,
+      "nominal": 29380991,
       "realGrowth": 2.8
     },
     {
       "year": 2025,
-      "nominal": 30762099,
-      "realGrowth": 2.1
+      "nominal": 30861292,
+      "realGrowth": 2.3
     }
   ],
   "industryMix": [
