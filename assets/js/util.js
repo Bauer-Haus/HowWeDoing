@@ -321,8 +321,23 @@
     return v === null || v === '' ? fallback : v;
   }
 
+  /* Reference years, read from the data rather than written into labels, so
+     a refresh that moves a series to a newer year relabels the site with it. */
+  function sourceYear(key) {
+    const m = /\b(19|20)\d{2}\b/.exec((D.sources[key] && D.sources[key].vintage) || '');
+    return m ? Number(m[0]) : null;
+  }
+  const years = {
+    gdp: D.national.headline.gdpYear || sourceYear('bea-gdp'),
+    crime: sourceYear('fbi-crime'),
+    acs: sourceYear('census-acs'),
+    pop: sourceYear('census-pop'),
+    /* the national crime series is compiled by hand and may trail the states */
+    nationalCrime: D.national.crimeHistory[D.national.crimeHistory.length - 1].year,
+  };
+
   window.HWDUtil = {
-    D, byAbbr, stateList,
+    D, byAbbr, stateList, years, sourceYear,
     fmt, formatters, gdpShort, popShort, usd, ordinal,
     rank, rankLabel, weightedMean, median, extent, topN, nationalValue,
     quantileScale, inkOn, SEQ,

@@ -17,8 +17,8 @@
   const first = N.crimeHistory[0];
   const last = N.crimeHistory[N.crimeHistory.length - 1];
   const tiles = [
-    { label: 'National violent crime rate', value: H.violentCrime.toFixed(1), sub: 'per 100,000 · 2024', delta: ((last.violent / first.violent - 1) * 100).toFixed(0) + '% vs 1991', dir: 'up' },
-    { label: 'National property crime rate', value: Math.round(H.propertyCrime).toLocaleString('en-US'), sub: 'per 100,000 · 2024', delta: ((last.property / first.property - 1) * 100).toFixed(0) + '% vs 1991', dir: 'up' },
+    { label: 'National violent crime rate', value: H.violentCrime.toFixed(1), sub: 'per 100,000 · ' + U.years.nationalCrime, delta: ((last.violent / first.violent - 1) * 100).toFixed(0) + '% vs 1991', dir: 'up' },
+    { label: 'National property crime rate', value: Math.round(H.propertyCrime).toLocaleString('en-US'), sub: 'per 100,000 · ' + U.years.nationalCrime, delta: ((last.property / first.property - 1) * 100).toFixed(0) + '% vs 1991', dir: 'up' },
     { label: 'Highest violent crime rate', value: vHi.vcrime.toFixed(1), sub: vHi.name },
     { label: 'Lowest violent crime rate', value: vLo.vcrime.toFixed(1), sub: vLo.name },
   ];
@@ -42,7 +42,7 @@
     const m = sel.value;
     const def = D.metrics[m];
     const wrap = U.el('div', null, [
-      U.el('div', { class: 'chart-title', text: def.label + ', 2024' }),
+      U.el('div', { class: 'chart-title', text: def.label + ', ' + U.years.crime }),
       U.el('div', { class: 'chart-sub', text: def.desc }),
     ]);
     wrap.appendChild(window.HWDMap.drawMap({ metric: m }));
@@ -69,14 +69,14 @@
   /* ---------- national trends ---------- */
 
   U.mount('#chart-violent-trend', C.lineChart({
-    title: 'Violent crime rate, 1991–2024',
+    title: 'Violent crime rate, 1991–' + U.years.nationalCrime,
     subtitle: 'Offences per 100,000 residents',
     series: [{ name: 'Violent crime', color: 'var(--series-1)', points: N.crimeHistory.map((r) => [r.year, r.violent]) }],
     area: true,
     yFormat: (v) => Math.round(v).toLocaleString('en-US'),
     tipFormat: (v) => v.toFixed(1) + ' per 100k',
     xFormat: (v) => String(Math.round(v)),
-    xTicks: [1991, 2000, 2010, 2019, 2024],
+    xTicks: [1991, 2000, 2010, 2019, U.years.nationalCrime],
     xLabel: 'Year',
     height: 300,
     caption: 'The rate has fallen 53% from its 1991 peak, with a temporary rise around 2020.',
@@ -84,14 +84,14 @@
   }));
 
   U.mount('#chart-property-trend', C.lineChart({
-    title: 'Property crime rate, 1991–2024',
+    title: 'Property crime rate, 1991–' + U.years.nationalCrime,
     subtitle: 'Offences per 100,000 residents · homicide is charted on the overview page, where all three series are indexed to a common base',
     series: [{ name: 'Property crime', color: 'var(--series-2)', points: N.crimeHistory.map((r) => [r.year, r.property]) }],
     area: true,
     yFormat: (v) => Math.round(v).toLocaleString('en-US'),
     tipFormat: (v) => Math.round(v).toLocaleString('en-US') + ' per 100k',
     xFormat: (v) => String(Math.round(v)),
-    xTicks: [1991, 2000, 2010, 2019, 2024],
+    xTicks: [1991, 2000, 2010, 2019, U.years.nationalCrime],
     xLabel: 'Year',
     height: 300,
     caption: 'Property crime is about a third of its 1991 rate — the largest sustained decline of any major crime category.',
@@ -102,7 +102,7 @@
 
   U.mount('#chart-crime-poverty', C.scatter({
     title: 'Violent crime against poverty',
-    subtitle: 'Each point is a state · 2024',
+    subtitle: 'Each point is a state · ' + U.years.crime,
     data: D.states.map((s) => ({ x: s.poverty, y: s.vcrime, label: s.name, abbr: s.abbr, href: 'state.html?s=' + s.abbr })),
     xLabel: 'Poverty rate',
     yLabel: 'Violent crime per 100k',
@@ -116,7 +116,7 @@
 
   U.mount('#chart-crime-income', C.scatter({
     title: 'Violent crime against median household income',
-    subtitle: 'Each point is a state · 2024',
+    subtitle: 'Each point is a state · ' + U.years.crime,
     data: D.states.map((s) => ({ x: s.mhi, y: s.vcrime, label: s.name, abbr: s.abbr, href: 'state.html?s=' + s.abbr })),
     xLabel: 'Median household income',
     yLabel: 'Violent crime per 100k',
@@ -132,6 +132,7 @@
 
   const table = document.getElementById('crime-table');
   const caption = table.querySelector('caption');
+  if (caption) caption.textContent = 'FBI Uniform Crime Reporting data for ' + U.years.crime + ', rates per 100,000 residents.';
   table.innerHTML = '';
   if (caption) table.appendChild(caption);
   table.appendChild(U.el('thead', null, U.el('tr', null, [

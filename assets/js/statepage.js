@@ -21,7 +21,7 @@
     U.el('p', { class: 'small muted-text', text: region + ' · ' + U.fmt('pop', s.pop) + ' residents · ranked ' + U.ordinal(U.rank('gdp', s.abbr)) + ' by economic output' }),
     U.el('h1', { text: s.name }),
     U.el('div', { class: 'hero-figure', text: U.gdpShort(s.gdp) }),
-    U.el('p', { class: 'small', text: 'nominal GDP in 2025 · ' + s.gdpShare.toFixed(2) + '% of the US economy · ' + (s.growth >= 0 ? '+' : '') + s.growth.toFixed(1) + '% real growth' }),
+    U.el('p', { class: 'small', text: 'nominal GDP in ' + U.years.gdp + ' · ' + s.gdpShare.toFixed(2) + '% of the US economy · ' + (s.growth >= 0 ? '+' : '') + s.growth.toFixed(1) + '% real growth' }),
     U.el('ul', { class: 'chips' }, s.inds.map((i) => U.el('li', { text: i }))),
   ]));
 

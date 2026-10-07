@@ -33,13 +33,13 @@
   /* ---------- KPI row ---------- */
 
   const kpis = [
-    { label: 'Nominal GDP, 2025', value: U.gdpShort(H.gdp), sub: 'Sum of states: ' + U.gdpShort(D.meta.stateGdpSum), delta: '+' + H.realGrowth.toFixed(1) + '% real', dir: 'up' },
+    { label: 'Nominal GDP, ' + U.years.gdp, value: U.gdpShort(H.gdp), sub: 'Sum of states: ' + U.gdpShort(D.meta.stateGdpSum), delta: '+' + H.realGrowth.toFixed(1) + '% real', dir: 'up' },
     { label: 'GDP per capita', value: U.usd(Math.round(H.gdp * 1e6 / H.population), 0), sub: 'Output per resident' },
-    { label: 'Population', value: (H.population / 1e6).toFixed(1) + 'M', sub: 'July 2025 estimate' },
+    { label: 'Population', value: (H.population / 1e6).toFixed(1) + 'M', sub: 'July ' + U.years.pop + ' estimate' },
     { label: 'Median household income', value: U.usd(H.medianHouseholdIncome, 0), sub: 'CPS ASEC, 2024' },
     { label: 'Unemployment', value: H.unemployment.toFixed(1) + '%', sub: H.unemploymentAsOf },
     { label: 'Poverty rate', value: H.povertyRate.toFixed(1) + '%', sub: 'ACS, 2024' },
-    { label: 'Violent crime', value: H.violentCrime.toFixed(1), sub: 'per 100,000 · 2024', delta: 'lowest since 1970s', dir: 'up' },
+    { label: 'Violent crime', value: H.violentCrime.toFixed(1), sub: 'per 100,000 · ' + U.years.nationalCrime, delta: 'lowest since 1970s', dir: 'up' },
     { label: 'Life expectancy', value: H.lifeExpectancy.toFixed(1), sub: 'years at birth · ' + H.lifeExpectancyYear },
   ];
 
@@ -88,11 +88,13 @@
 
   /* ---------- state GDP map and rankings ---------- */
 
+  const gdpMapTitle = document.getElementById('map-gdp-title');
+  if (gdpMapTitle) gdpMapTitle.textContent = 'Nominal GDP by state, ' + U.years.gdp;
   U.mount('#map-gdp', window.HWDMap.drawMap({ metric: 'gdp' }));
 
   U.mount('#chart-top-gdp', C.barChart({
     title: 'The twelve largest state economies',
-    subtitle: 'Nominal GDP, 2025 · share of the 51-jurisdiction total',
+    subtitle: 'Nominal GDP, ' + U.years.gdp + ' · share of the 51-jurisdiction total',
     data: U.topN('gdp', 12).map((s) => ({
       label: s.name, value: s.gdp, abbr: s.abbr, href: 'state.html?s=' + s.abbr,
       extra: [['Share of US', s.gdpShare.toFixed(1) + '%'], ['Per capita', U.usd(s.gdpPerCapita, 0)]],
@@ -105,7 +107,7 @@
 
   U.mount('#chart-gdp-per-capita', C.barChart({
     title: 'Output per resident: the top and bottom eight',
-    subtitle: 'Nominal GDP divided by population, 2025',
+    subtitle: 'Nominal GDP divided by population, ' + U.years.gdp,
     data: [...U.topN('gdpPerCapita', 8), ...U.topN('gdpPerCapita', 8, 'asc').reverse()].map((s) => ({
       label: s.name, value: s.gdpPerCapita, abbr: s.abbr, href: 'state.html?s=' + s.abbr,
       extra: [['Median household income', U.usd(s.mhi, 0)]],
@@ -118,7 +120,7 @@
 
   U.mount('#chart-growth-states', C.divergingBars({
     title: 'Fastest and slowest growing state economies',
-    subtitle: 'Real GDP growth, 2025',
+    subtitle: 'Real GDP growth, ' + U.years.gdp,
     data: [...U.topN('growth', 8), ...U.topN('growth', 8, 'asc').reverse()].map((s) => ({
       label: s.name, value: s.growth, href: 'state.html?s=' + s.abbr,
     })),
@@ -132,7 +134,7 @@
 
   U.mount('#chart-industry', C.shareBar({
     title: 'Value added by industry, share of US GDP',
-    subtitle: '2025 · all private industries plus government',
+    subtitle: U.years.gdp + ' · all private industries plus government',
     data: N.industryMix.map((r) => ({ label: r.sector, share: r.share })),
     total: H.gdp,
     labelW: 270,
@@ -193,7 +195,7 @@
     yFormat: (v) => v.toFixed(0),
     tipFormat: (v) => v.toFixed(0) + ' (1991=100)',
     xFormat: (v) => String(Math.round(v)),
-    xTicks: [1991, 2000, 2010, 2019, 2024],
+    xTicks: [1991, 2000, 2010, 2019, U.years.nationalCrime],
     xLabel: 'Year',
     height: 320,
     caption: 'Property crime has fallen furthest: it is about a third of its 1991 rate. Homicide rose sharply in 2020 and has since given back that increase.',
@@ -202,7 +204,7 @@
 
   U.mount('#chart-crime-map', (function () {
     const wrap = U.el('div');
-    wrap.appendChild(U.el('div', { class: 'chart-title', text: 'Violent crime rate by state, 2024' }));
+    wrap.appendChild(U.el('div', { class: 'chart-title', text: 'Violent crime rate by state, ' + U.years.crime }));
     wrap.appendChild(U.el('div', { class: 'chart-sub', text: 'Offences per 100,000 residents. Reporting practices differ by state — see the crime page.' }));
     wrap.appendChild(window.HWDMap.drawMap({ metric: 'vcrime' }));
     return wrap;

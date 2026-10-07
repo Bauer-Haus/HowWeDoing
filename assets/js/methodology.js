@@ -63,15 +63,17 @@
 
   const limitations = [
     {
-      h: 'This is a compiled snapshot, not a live feed',
-      p: 'The figures were assembled from published sources and are frozen into a data file. ' +
-         'Tax rates change every January, BLS revises state unemployment monthly, and BEA revises ' +
-         'state GDP quarterly. Check the primary source before acting on any single number.',
+      h: 'Refreshed monthly, not live',
+      p: 'The agency-sourced series are re-fetched on the 25th of each month and land on the site once ' +
+         'the refresh is reviewed and merged, so a figure can trail its source by up to a month. Agencies ' +
+         'also revise: BLS revises state unemployment monthly and BEA revises state GDP every September. ' +
+         'Check the primary source before acting on any single number.',
     },
     {
       h: 'Series come from different years',
-      p: 'GDP is 2025, income and poverty are the 2024 American Community Survey, crime is 2024 FBI ' +
-         'reporting, unemployment is July 2026, tax rates are 2026. A state’s figures are therefore ' +
+      p: 'GDP is ' + U.years.gdp + ', income and poverty are the ' + U.years.acs + ' American Community Survey, ' +
+         'state crime is ' + U.years.crime + ' FBI reporting (the national crime trend runs to ' + U.years.nationalCrime + '), ' +
+         'and unemployment is ' + (D.sources['bls-laus'].vintage.split(',')[0]) + '. A state’s figures are therefore ' +
          'not all snapshots of the same moment, and ratios between series carry that mismatch.',
     },
     {
